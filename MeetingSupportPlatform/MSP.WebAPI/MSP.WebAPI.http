@@ -1,0 +1,6 @@
+@MSP.WebAPI_HostAddress = http://localhost:5258
+
+GET {{MSP.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
