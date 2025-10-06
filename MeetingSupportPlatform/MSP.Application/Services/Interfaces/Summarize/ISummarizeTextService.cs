@@ -8,5 +8,6 @@ namespace MSP.Application.Services.Interfaces.Summarize
     {
         Task<ApiResponse<SummarizeTextResponse>> SummarizeAsync(string text);
         Task<ApiResponse<SummarizeTextResponse>> CreateTodoListAsync(string request);
+        Task<ApiResponse<SummarizeVideoTextResponse>> SummarizeVideoTextAsync(string text, IFormFile? video);
     }
 }

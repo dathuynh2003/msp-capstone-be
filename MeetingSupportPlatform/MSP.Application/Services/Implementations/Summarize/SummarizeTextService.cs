@@ -14,10 +14,12 @@ namespace MSP.Application.Services.Implementations.Summarize
     public class SummarizeTextService : ISummarizeTextService
     {
         private readonly IGeminiTextSummarizer _geminiSummarizer;
+        private readonly IGeminiVideoTextSummarizer _geminiVideoTextSummarizer;
 
-        public SummarizeTextService(IGeminiTextSummarizer geminiSummarizer)
+        public SummarizeTextService(IGeminiTextSummarizer geminiSummarizer, IGeminiVideoTextSummarizer geminiVideoTextSummarizer)
         {
             _geminiSummarizer = geminiSummarizer;
+            _geminiVideoTextSummarizer = geminiVideoTextSummarizer;
         }
 
         public async Task<ApiResponse<SummarizeTextResponse>> SummarizeAsync(string request)
@@ -168,6 +170,56 @@ namespace MSP.Application.Services.Implementations.Summarize
                 // Ignore errors
             }
             return false;
+        }
+
+        public async Task<ApiResponse<SummarizeVideoTextResponse>> SummarizeVideoTextAsync(string text, IFormFile? video)
+        {
+            try
+            {
+                // 1. Kiểm tra đầu vào
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return ApiResponse<SummarizeVideoTextResponse>.ErrorResponse(null, "English transcript is required!");
+                }
+
+                // 2. Xử lý video nếu có
+                byte[]? videoData = null;
+                string? videoFileName = null;
+
+                if (video != null && video.Length > 0)
+                {
+                    // Kiểm tra kích thước file (tối đa 100MB)
+                    if (video.Length > 100 * 1024 * 1024)
+                    {
+                        return ApiResponse<SummarizeVideoTextResponse>.ErrorResponse(null, "Video file size cannot exceed 100MB!");
+                    }
+
+                    // Kiểm tra định dạng video
+                    var allowedExtensions = new[] { ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv" };
+                    var fileExtension = Path.GetExtension(video.FileName).ToLowerInvariant();
+                    
+                    if (!allowedExtensions.Contains(fileExtension))
+                    {
+                        return ApiResponse<SummarizeVideoTextResponse>.ErrorResponse(null, "Unsupported video format. Supported formats: MP4, AVI, MOV, WMV, FLV, WebM, MKV");
+                    }
+
+                    using var memoryStream = new MemoryStream();
+                    await video.CopyToAsync(memoryStream);
+                    videoData = memoryStream.ToArray();
+                    videoFileName = video.FileName;
+                }
+
+                // 3. Gọi Gemini để xử lý
+                return await _geminiVideoTextSummarizer.SummarizeVideoTextAsync(text, videoData, videoFileName);
+            }
+            catch (ArgumentException ex)
+            {
+                return ApiResponse<SummarizeVideoTextResponse>.ErrorResponse(null, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<SummarizeVideoTextResponse>.ErrorResponse(null, "Server error when processing video and text");
+            }
         }
     }
 }

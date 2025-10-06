@@ -242,14 +242,20 @@ namespace MSP.Infrastructure.Processors
                 var prompt = @$"
                 You are an AI assistant. Your task is to extract a TASK LIST from the following meeting transcript.
                 Requirements:
-                - Only list tasks, do not include assignees or deadlines.
-                - Return output as a bullet-point list.
-                - List all tasks explicitly.
-                - Output language: Vietnamese.
+                - Return output as a valid JSON array.
+                - Each task must be an object with the following fields:
+                  - assignee (string, leave empty if not provided)
+                  - startDate (string, format dd-MM-yyyy or empty if not provided)
+                  - endDate (string, format dd-MM-yyyy or empty if not provided)
+                  - priority (string: High, Medium, Low or empty if not provided)
+                - Only extract tasks, no explanations, no extra text.
+                - Output language for assignee and task content: Vietnamese.
+
                 Meeting transcript:
                 {cleanedText}
 
-                Output (tasks only):";
+                Output:
+                ";
 
                 string summary = string.Empty;
 

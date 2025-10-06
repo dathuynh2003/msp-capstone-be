@@ -44,5 +44,19 @@ namespace SummarizeService.API.Controllers
 
             return BadRequest(result);
         }
+
+        [HttpPost("video-text-analysis")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> VideoTextAnalysis([FromForm] SummarizeVideoTextRequest request)
+        {
+            var result = await _service.SummarizeVideoTextAsync(request.Text, request.Video);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+
+            return BadRequest(result);
+        }
     }
 }

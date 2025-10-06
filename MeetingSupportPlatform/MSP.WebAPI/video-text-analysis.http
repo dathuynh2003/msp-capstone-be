@@ -1,0 +1,60 @@
+### Vietnamese Transcript Generation API Test
+POST https://localhost:7000/api/v1/summarize/video-text-analysis
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="text"
+
+John: Good morning everyone. Let's start our weekly team meeting. Sarah, can you give us an update on the mobile app development project?
+
+Sarah: Sure, John. We've completed about 80% of the core features. The user authentication system is working well, and we've integrated the AI chatbot functionality. However, we're facing some performance issues with the video processing module.
+
+Mike: I can help with that. We might need to optimize the video compression algorithm. I'll look into it this week.
+
+John: Great. What about the deadline? Are we still on track for the December 15th release?
+
+Sarah: Yes, we should be able to meet the deadline if we resolve the performance issues by next week.
+
+Mike: I'll have a solution ready by Friday.
+
+John: Perfect. Let's also discuss the user interface improvements. Any feedback from the beta testing?
+
+Sarah: Users are generally happy with the design, but they want more customization options for the dashboard.
+
+John: Alright, let's add that to our next sprint. Any other concerns?
+
+Mike: We should also consider adding offline functionality for better user experience.
+
+John: Good point. Let's prioritize that after the current features are stable.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="video"; filename="team-meeting.mp4"
+Content-Type: video/mp4
+
+< ./team-meeting.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### English Transcript Only (without video)
+POST https://localhost:7000/api/v1/summarize/video-text-analysis
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="text"
+
+Alice: Hi everyone, welcome to our product review meeting. Let's go through the quarterly results.
+
+Bob: The sales numbers look promising. We've seen a 25% increase compared to last quarter.
+
+Alice: That's excellent. What about customer feedback?
+
+Carol: Customer satisfaction scores are up to 4.2 out of 5. The new features we launched last month are getting positive reviews.
+
+Bob: However, we've received some complaints about the mobile app performance on older devices.
+
+Alice: That's something we need to address. Bob, can you work with the development team to optimize the app for older devices?
+
+Bob: Absolutely. I'll start working on that next week.
+
+Carol: We should also consider expanding our market reach. The Asian market shows great potential.
+
+Alice: Good idea. Let's schedule a separate meeting to discuss our expansion strategy.
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

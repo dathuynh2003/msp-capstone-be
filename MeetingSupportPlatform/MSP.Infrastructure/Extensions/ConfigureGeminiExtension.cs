@@ -35,6 +35,7 @@ namespace MSP.Infrastructure.Extensions
             });
 
             services.AddScoped<IGeminiTextSummarizer, GeminiTextSummarizer>();
+            services.AddScoped<IGeminiVideoTextSummarizer, GeminiVideoTextSummarizer>();
             return services;
         }
     }
