@@ -14,7 +14,7 @@ namespace MSP.Infrastructure.Extensions
             services.AddCustomDBContext(config);
             services.AddServices(config);
             services.AddGeminiService(config);
-            //services.AddMessageBroker(config, typeof(DependencyInjection).Assembly);
+
             return services;
         }
 

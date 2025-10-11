@@ -1,14 +1,16 @@
-﻿using MSP.Application.Exceptions;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Identity;
 using MSP.Application.Abstracts;
+using MSP.Application.Exceptions;
+using MSP.Application.Models.Requests.Auth;
+using MSP.Application.Models.Requests.Notification;
+using MSP.Application.Models.Responses.Auth;
+using MSP.Application.Services.Interfaces.Auth;
+using MSP.Application.Services.Interfaces.Notification;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 using MSP.Shared.Enums;
-using MSP.Domain.Events;
-using MassTransit;
-using Microsoft.AspNetCore.Identity;
-using MSP.Application.Services.Interfaces.Auth;
-using MSP.Application.Models.Requests.Auth;
-using MSP.Application.Models.Responses.Auth;
+using MSP.Shared.Specifications;
 
 namespace MSP.Application.Services.Implementations.Auth
 {
@@ -17,14 +19,14 @@ namespace MSP.Application.Services.Implementations.Auth
         private readonly IAuthTokenProcessor _authTokenProcessor;
         private readonly UserManager<User> _userManager;
         private readonly IUserRepository _userRepository;
-        private readonly IPublishEndpoint _publishEndpoint;
+        private readonly INotificationService _notificationService;
 
-        public AccountService(IAuthTokenProcessor authTokenProcessor, UserManager<User> userManager, IUserRepository userRepository, IPublishEndpoint publishEndpoint)
+        public AccountService(IAuthTokenProcessor authTokenProcessor, UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService)
         {
             _authTokenProcessor = authTokenProcessor;
             _userManager = userManager;
             _userRepository = userRepository;
-            _publishEndpoint = publishEndpoint;
+            _notificationService = notificationService;
         }
         public async Task<ApiResponse<string>> RegisterAsync(RegisterRequest registerRequest)
         {
@@ -51,19 +53,15 @@ namespace MSP.Application.Services.Implementations.Auth
             // Generate email confirmation token
             var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            // Publish user created event with confirmation token
-            var userCreatedEvent = new UserCreatedEvent
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = UserRoleEnum.Company.ToString(),
-                CreatedAt = DateTime.UtcNow,
-                ConfirmationToken = confirmationToken
-            };
+            // Gửi email xác nhận bằng Hangfire
+            var confirmationUrl = $"https://localhost:7129/api/v1/auth/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
+            var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FirstName, confirmationUrl);
 
-            await _publishEndpoint.Publish(userCreatedEvent);
+            _notificationService.SendEmailNotification(
+                user.Email,
+                "Confirm Your Email Address - Meeting Support Platform",
+                emailBody
+            );
 
             return ApiResponse<string>.SuccessResponse("User created successfully! Please check your email to confirm your account.", "Registration successful. Please check your email for confirmation instructions.");
         }
@@ -196,6 +194,16 @@ namespace MSP.Application.Services.Implementations.Auth
                 return ApiResponse<string>.ErrorResponse("Invalid confirmation token.");
             }
 
+            // Tạo notification in-app lưu vào DB
+            await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
+            {
+                UserId = user.Id.ToString(),
+                Title = "Chào mừng đến với MSP",
+                Message = $"Hi {user.FirstName}, chào mừng bạn đến với nền tảng hỗ trợ các cuộc họp!",
+                Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
+                Data = $"{{\"eventType\":\"EmailConfirmed\",\"userId\":\"{user.Id}\"}}"
+            });
+
             return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email confirmation successful.");
         }
 
@@ -213,20 +221,6 @@ namespace MSP.Application.Services.Implementations.Auth
             }
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            // Publish event to send confirmation email
-            var emailConfirmationEvent = new UserCreatedEvent
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = UserRoleEnum.Company.ToString(),
-                CreatedAt = DateTime.UtcNow,
-                ConfirmationToken = token
-            };
-
-            await _publishEndpoint.Publish(emailConfirmationEvent);
 
             return ApiResponse<string>.SuccessResponse("Confirmation email sent successfully!", "Please check your email for confirmation instructions.");
         }

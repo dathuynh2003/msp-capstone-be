@@ -1,6 +1,4 @@
-﻿using MSP.Application.Services.Implementations;
-using MSP.Application.Services.Interfaces;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MSP.Application.Services.Interfaces.Auth;
 using MSP.Application.Services.Implementations.Auth;

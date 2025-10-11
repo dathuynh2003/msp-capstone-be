@@ -1,7 +1,8 @@
 //using AuthService.Application.Extensions;
 using MSP.Infrastructure.Extensions;
 using MSP.Application.Extensions;
-using NotificationService.Application.Consumers;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,13 +11,15 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastuctureService(builder.Configuration);
 builder.Services.AddApplicationService(builder.Configuration);
 
-// Add MassTransit with RabbitMQ
-builder.Services.AddMessageBroker(builder.Configuration, typeof(UserCreatedEventConsumer).Assembly);
-
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
+
+// Add Hangfire
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DbConnectionString")));
+builder.Services.AddHangfireServer();
 
 // Add Google Authentication
 builder.Services.AddAuthentication()
@@ -55,6 +58,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseHangfireDashboard();
 
 //app.UseInfrastructurePolicy();
 app.UseCors("AllowWeb");

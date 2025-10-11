@@ -1,3 +1,4 @@
+using Hangfire;
 using MSP.Shared.Enums;
 using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Abstracts;
@@ -19,7 +20,16 @@ namespace MSP.Application.Services.Implementations.Notification
             _emailSender = emailSender;
         }
 
-        public async Task<NotificationResponse> CreateNotificationAsync(CreateNotificationRequest request)
+        /// G?i email notification qua Hangfire
+        public void SendEmailNotification(string toEmail, string title, string message)
+        {
+            BackgroundJob.Enqueue(() =>
+                _emailSender.SendEmailAsync(toEmail, title, message, null, null, null, null, true)
+            );
+        }
+
+        /// T?o notification InApp (tách riêng)
+        public async Task<NotificationResponse> CreateInAppNotificationAsync(CreateNotificationRequest request)
         {
             var notification = new Domain.Entities.Notification
             {
@@ -32,29 +42,10 @@ namespace MSP.Application.Services.Implementations.Notification
             };
 
             var createdNotification = await _notificationRepository.CreateAsync(notification);
-
-            // Send email notification if type is Email
-            if (request.Type == NotificationTypeEnum.Email.ToString())
-            {
-                try
-                {
-                    var email = ExtractEmailFromData(request.Data) ?? request.UserId;
-
-                    await _emailSender.SendEmailAsync(
-                        email,
-                        request.Title,
-                        request.Message,
-                        isHtml: true
-                    );
-                }
-                catch (Exception ex)
-                {
-                }
-            }
-
             return MapToResponse(createdNotification);
         }
 
+        // Các hàm CRUD notification gi? nguyên, code rõ ràng:
         public async Task<NotificationResponse?> GetNotificationByIdAsync(Guid id)
         {
             var notification = await _notificationRepository.GetByIdAsync(id);
@@ -97,56 +88,7 @@ namespace MSP.Application.Services.Implementations.Notification
             return await _notificationRepository.GetUnreadCountAsync(userId);
         }
 
-        public async Task SendToUserAsync(string userId, string title, string message, string? type = null, string? data = null)
-        {
-            // If type is Email and userId looks like an email, send email directly
-            if (type == "Email" && userId.Contains("@"))
-            {
-                try
-                {
-                    await _emailSender.SendEmailAsync(
-                        userId, // userId is actually email in this case
-                        title,
-                        message,
-                        isHtml: true
-                    );
-                }
-                catch (Exception ex)
-                {
-                    // Log error but don't fail
-                    // In production, use proper logging
-                }
-            }
-            else
-            {
-                // For in-app notifications, store in database
-                var request = new CreateNotificationRequest
-                {
-                    UserId = userId,
-                    Title = title,
-                    Message = message,
-                    Type = type,
-                    Data = data
-                };
-
-                await CreateNotificationAsync(request);
-            }
-        }
-
-        //public async Task BroadcastNotificationAsync(string title, string message, string? type = null, string? data = null)
-        //{
-        //    // Send real-time notification to all connected users
-        //    await _signalRNotificationService.SendToAllAsync(new
-        //    {
-        //        Type = "BroadcastNotification",
-        //        Title = title,
-        //        Message = message,
-        //        NotificationType = type ?? "InApp",
-        //        Data = data,
-        //        Timestamp = DateTime.UtcNow
-        //    });
-        //}
-
+        // Helper mapping
         private static NotificationResponse MapToResponse(Domain.Entities.Notification notification)
         {
             return new NotificationResponse
@@ -161,34 +103,6 @@ namespace MSP.Application.Services.Implementations.Notification
                 ReadAt = notification.ReadAt,
                 Data = notification.Data
             };
-        }
-
-        private static string? ExtractEmailFromData(string? data)
-        {
-            if (string.IsNullOrEmpty(data))
-                return null;
-
-            try
-            {
-                // Try to parse JSON data to extract email
-                // This is a simple implementation - you might want to use a proper JSON parser
-                if (data.Contains("\"email\""))
-                {
-                    // Extract email from JSON-like string
-                    var emailStart = data.IndexOf("\"email\"") + 8;
-                    var emailEnd = data.IndexOf("\"", emailStart);
-                    if (emailEnd > emailStart)
-                    {
-                        return data.Substring(emailStart, emailEnd - emailStart);
-                    }
-                }
-            }
-            catch
-            {
-                // If parsing fails, return null
-            }
-
-            return null;
         }
     }
 }
