@@ -37,10 +37,10 @@ namespace MSP.Application.Services.Implementations.Auth
             {
                 Email = registerRequest.Email,
                 UserName = registerRequest.Email,
-                FirstName = registerRequest.FirstName,
-                LastName = registerRequest.LastName,
+                FullName = registerRequest.FullName,
                 SecurityStamp = Guid.NewGuid().ToString(),
-                EmailConfirmed = false // Email chưa được xác thực
+                EmailConfirmed = false, // Email chưa được xác thực
+                CreatedAt = DateTime.UtcNow
             };
             user.PasswordHash = _userManager.PasswordHasher.HashPassword(user, registerRequest.Password);
             var result = await _userManager.CreateAsync(user);
@@ -55,7 +55,7 @@ namespace MSP.Application.Services.Implementations.Auth
 
             // Gửi email xác nhận bằng Hangfire
             var confirmationUrl = $"https://localhost:7129/api/v1/auth/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
-            var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FirstName, confirmationUrl);
+            var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FullName, confirmationUrl);
 
             _notificationService.SendEmailNotification(
                 user.Email,
@@ -197,9 +197,9 @@ namespace MSP.Application.Services.Implementations.Auth
             // Tạo notification in-app lưu vào DB
             await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
             {
-                UserId = user.Id.ToString(),
+                UserId = user.Id,
                 Title = "Chào mừng đến với MSP",
-                Message = $"Hi {user.FirstName}, chào mừng bạn đến với nền tảng hỗ trợ các cuộc họp!",
+                Message = $"Hi {user.FullName}, chào mừng bạn đến với nền tảng hỗ trợ các cuộc họp!",
                 Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
                 Data = $"{{\"eventType\":\"EmailConfirmed\",\"userId\":\"{user.Id}\"}}"
             });

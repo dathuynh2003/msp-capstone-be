@@ -16,21 +16,21 @@ namespace NotificationService.API.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetUserNotifications(string userId)
+        public async Task<IActionResult> GetUserNotifications(Guid userId)
         {
             var notifications = await _notificationService.GetUserNotificationsAsync(userId);
             return Ok(notifications);
         }
 
         [HttpGet("user/{userId}/unread")]
-        public async Task<IActionResult> GetUserUnreadNotifications(string userId)
+        public async Task<IActionResult> GetUserUnreadNotifications(Guid userId)
         {
             var notifications = await _notificationService.GetUserUnreadNotificationsAsync(userId);
             return Ok(notifications);
         }
 
         [HttpGet("user/{userId}/unread-count")]
-        public async Task<IActionResult> GetUnreadCount(string userId)
+        public async Task<IActionResult> GetUnreadCount(Guid userId)
         {
             var count = await _notificationService.GetUnreadCountAsync(userId);
             return Ok(new { UnreadCount = count });

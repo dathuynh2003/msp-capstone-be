@@ -7,11 +7,11 @@ namespace MSP.Application.Services.Interfaces.Notification
     {
         Task<NotificationResponse> CreateInAppNotificationAsync(CreateNotificationRequest request);
         Task<NotificationResponse?> GetNotificationByIdAsync(Guid id);
-        Task<IEnumerable<NotificationResponse>> GetUserNotificationsAsync(string userId);
-        Task<IEnumerable<NotificationResponse>> GetUserUnreadNotificationsAsync(string userId);
+        Task<IEnumerable<NotificationResponse>> GetUserNotificationsAsync(Guid userId);
+        Task<IEnumerable<NotificationResponse>> GetUserUnreadNotificationsAsync(Guid userId);
         Task<NotificationResponse> MarkAsReadAsync(Guid id);
         Task<bool> DeleteNotificationAsync(Guid id);
-        Task<int> GetUnreadCountAsync(string userId);
+        Task<int> GetUnreadCountAsync(Guid userId);
         void SendEmailNotification(string toEmail, string title, string message);
     }
 }

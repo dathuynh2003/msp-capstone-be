@@ -14,8 +14,7 @@ namespace MSP.Infrastructure.SeedConfiguration
                 {
                     Id = Guid.Parse("c1d2e3f4-a5b6-4789-1234-56789abcdef2"),
                     UserName = "admin",
-                    FirstName = "System",
-                    LastName = "Admin",
+                    FullName = "Admin",
                     NormalizedUserName = "ADMIN",
                     Email = "admin@gmail.com",
                     PasswordHash = new PasswordHasher<User>().HashPassword(null, "1")
@@ -24,8 +23,7 @@ namespace MSP.Infrastructure.SeedConfiguration
                 {
                     Id = Guid.Parse("c2d4e3f4-a5b6-4789-1234-56789abcdef2"),
                     UserName = "Member",
-                    FirstName = "System",
-                    LastName = "Member",
+                    FullName = "Member",
                     NormalizedUserName = "Member",
                     Email = "member@gmail.com",
                     PasswordHash = new PasswordHasher<User>().HashPassword(null, "1")
@@ -34,8 +32,7 @@ namespace MSP.Infrastructure.SeedConfiguration
                 {
                     Id = Guid.Parse("c3d4e3f4-a5b6-4789-1234-56789abcdef2"),
                     UserName = "ProjectManager",
-                    FirstName = "System",
-                    LastName = "ProjectManager",
+                    FullName = "ProjectManager",
                     NormalizedUserName = "PROJECTMANAGER",
                     Email = "manager@gmail.com",
                     PasswordHash = new PasswordHasher<User>().HashPassword(null, "1")
@@ -43,11 +40,10 @@ namespace MSP.Infrastructure.SeedConfiguration
                 new User
                 {
                     Id = Guid.Parse("c4d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                    UserName = "Company",
-                    FirstName = "System",
-                    LastName = "Company",
-                    NormalizedUserName = "COMPANY",
-                    Email = "company@gmail.com",
+                    UserName = "BusinessOwner",
+                    FullName = "BusinessOwner",
+                    NormalizedUserName = "BUSINESSOWNER",
+                    Email = "businessowner@gmail.com",
                     PasswordHash = new PasswordHasher<User>().HashPassword(null, "1")
                 }
             );

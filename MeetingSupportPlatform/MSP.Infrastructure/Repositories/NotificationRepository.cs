@@ -26,7 +26,7 @@ namespace NotificationService.Infrastructure.Repositories
             return await _context.Notifications.FindAsync(id);
         }
 
-        public async Task<IEnumerable<Notification>> GetByUserIdAsync(string userId)
+        public async Task<IEnumerable<Notification>> GetByUserIdAsync(Guid userId)
         {
             return await _context.Notifications
                 .Where(n => n.UserId == userId)
@@ -34,7 +34,7 @@ namespace NotificationService.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Notification>> GetUnreadByUserIdAsync(string userId)
+        public async Task<IEnumerable<Notification>> GetUnreadByUserIdAsync(Guid userId)
         {
             return await _context.Notifications
                 .Where(n => n.UserId == userId && !n.IsRead)
@@ -60,7 +60,7 @@ namespace NotificationService.Infrastructure.Repositories
             return true;
         }
 
-        public async Task<int> GetUnreadCountAsync(string userId)
+        public async Task<int> GetUnreadCountAsync(Guid userId)
         {
             return await _context.Notifications
                 .CountAsync(n => n.UserId == userId && !n.IsRead);

@@ -25,33 +25,21 @@ namespace MSP.Infrastructure.Persistence.DBContext
             builder.ApplyConfiguration(new RoleConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
             builder.Entity<User>()
-                .Property(u => u.FirstName)
+                .Property(u => u.FullName)
                 .HasMaxLength(256);
+
             builder.Entity<User>()
-                .Property(u => u.LastName)
-            .HasMaxLength(256);
+                .HasOne(u => u.ManagedBy)
+                .WithMany(u => u.ManagedUsers)
+                .HasForeignKey(u => u.ManagedById)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<Notification>(entity =>
-            {
-                entity.ToTable("Notifications", "notification");
+            builder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).ValueGeneratedOnAdd();
-
-                entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-                entity.Property(e => e.Message).IsRequired().HasMaxLength(1000);
-                entity.Property(e => e.Type).HasMaxLength(50);
-                entity.Property(e => e.Data).HasMaxLength(4000);
-
-                entity.Property(e => e.CreatedAt).IsRequired();
-                entity.Property(e => e.IsRead).IsRequired();
-
-                // Indexes
-                entity.HasIndex(e => e.UserId);
-                entity.HasIndex(e => e.CreatedAt);
-                entity.HasIndex(e => e.IsRead);
-            });
         }
     }
 }

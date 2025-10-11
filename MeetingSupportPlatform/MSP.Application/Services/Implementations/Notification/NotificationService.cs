@@ -52,13 +52,13 @@ namespace MSP.Application.Services.Implementations.Notification
             return notification != null ? MapToResponse(notification) : null;
         }
 
-        public async Task<IEnumerable<NotificationResponse>> GetUserNotificationsAsync(string userId)
+        public async Task<IEnumerable<NotificationResponse>> GetUserNotificationsAsync(Guid userId)
         {
             var notifications = await _notificationRepository.GetByUserIdAsync(userId);
             return notifications.Select(MapToResponse);
         }
 
-        public async Task<IEnumerable<NotificationResponse>> GetUserUnreadNotificationsAsync(string userId)
+        public async Task<IEnumerable<NotificationResponse>> GetUserUnreadNotificationsAsync(Guid userId)
         {
             var notifications = await _notificationRepository.GetUnreadByUserIdAsync(userId);
             return notifications.Select(MapToResponse);
@@ -71,7 +71,6 @@ namespace MSP.Application.Services.Implementations.Notification
                 throw new ArgumentException("Notification not found");
 
             notification.IsRead = true;
-            notification.ReadAt = DateTime.UtcNow;
 
             var updatedNotification = await _notificationRepository.UpdateAsync(notification);
 
@@ -83,7 +82,7 @@ namespace MSP.Application.Services.Implementations.Notification
             return await _notificationRepository.DeleteAsync(id);
         }
 
-        public async Task<int> GetUnreadCountAsync(string userId)
+        public async Task<int> GetUnreadCountAsync(Guid userId)
         {
             return await _notificationRepository.GetUnreadCountAsync(userId);
         }
@@ -100,7 +99,6 @@ namespace MSP.Application.Services.Implementations.Notification
                 Type = notification.Type,
                 IsRead = notification.IsRead,
                 CreatedAt = notification.CreatedAt,
-                ReadAt = notification.ReadAt,
                 Data = notification.Data
             };
         }

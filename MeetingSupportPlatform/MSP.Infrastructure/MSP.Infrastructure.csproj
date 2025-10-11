@@ -29,8 +29,4 @@
 		<PackageReference Include="Mscc.GenerativeAI" Version="2.8.9" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Persistence\Migrations\" />
-	</ItemGroup>
-
 </Project>

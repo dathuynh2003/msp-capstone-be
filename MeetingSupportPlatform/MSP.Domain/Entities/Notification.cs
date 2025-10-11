@@ -1,29 +1,22 @@
+using MSP.Domain.Base;
 using System.ComponentModel.DataAnnotations;
 
 namespace MSP.Domain.Entities
 {
-    public class Notification
+    public class Notification : BaseEntity<Guid>
     {
-        public Guid Id { get; set; }
-        
         [Required]
-        public string UserId { get; set; } = string.Empty;
-        
+        public Guid UserId { get; set; }
+        public Guid? ActorId { get; set; }
         [Required]
-        public string Title { get; set; } = string.Empty;
-        
+        public string Title { get; set; }
         [Required]
-        public string Message { get; set; } = string.Empty;
-        
-        public string? Type { get; set; } // Email, SMS, Push, InApp
-        
+        public string Message { get; set; }
+        public string? Type { get; set; } // Meeting, Task, Project, InApp, ...
+        public string? EntityId { get; set; }
         public bool IsRead { get; set; } = false;
-        
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
-        public DateTime? ReadAt { get; set; }
-        
         public string? Data { get; set; } // JSON data for additional information
+        public virtual User User { get; set; }
     }
 }
 

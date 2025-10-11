@@ -9,14 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MSP.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class InitCreate : Migration
+    public partial class InitUserAndNotification : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.EnsureSchema(
-                name: "notification");
-
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -36,13 +33,16 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    FirstName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    LastName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    FullName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     RefreshToken = table.Column<string>(type: "text", nullable: true),
                     RefreshTokenExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     AvatarUrl = table.Column<string>(type: "text", nullable: true),
                     GoogleId = table.Column<string>(type: "text", nullable: true),
                     Provider = table.Column<string>(type: "text", nullable: true),
+                    Organization = table.Column<string>(type: "text", nullable: true),
+                    BusinessLicense = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ManagedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -61,26 +61,12 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Notifications",
-                schema: "notification",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
-                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Message = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
-                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    IsRead = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ReadAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Data = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_AspNetUsers_ManagedById",
+                        column: x => x.ManagedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -189,6 +175,34 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ActorId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    Message = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<string>(type: "text", nullable: true),
+                    EntityId = table.Column<string>(type: "text", nullable: true),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false),
+                    Data = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 table: "AspNetRoles",
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
@@ -202,13 +216,13 @@ namespace MSP.Infrastructure.Persistence.Migrations
 
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
-                columns: new[] { "Id", "AccessFailedCount", "AvatarUrl", "ConcurrencyStamp", "Email", "EmailConfirmed", "FirstName", "GoogleId", "LastName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "Provider", "RefreshToken", "RefreshTokenExpiresAtUtc", "SecurityStamp", "TwoFactorEnabled", "UserName" },
+                columns: new[] { "Id", "AccessFailedCount", "AvatarUrl", "BusinessLicense", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "FullName", "GoogleId", "LockoutEnabled", "LockoutEnd", "ManagedById", "NormalizedEmail", "NormalizedUserName", "Organization", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "Provider", "RefreshToken", "RefreshTokenExpiresAtUtc", "SecurityStamp", "TwoFactorEnabled", "UserName" },
                 values: new object[,]
                 {
-                    { new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, "5c771ed6-1b8b-4d63-acd0-2484ca02a54d", "admin@gmail.com", false, "System", null, "Admin", false, null, null, "ADMIN", "AQAAAAIAAYagAAAAEKLiLI10Dnu4GbE3OmBAHbuNGHgprMMz7nWKhvvLlQM1uheMr1LZoy6xL2laH7JX/w==", null, false, null, null, null, null, false, "admin" },
-                    { new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, "3a339ddb-8a93-4da8-a068-3fd157f65972", "member@gmail.com", false, "System", null, "Member", false, null, null, "Member", "AQAAAAIAAYagAAAAEF0g7Hzu2Guuu1zTck41tlfouO1BZEo8DBKfkEztuaQVvy4HyID4O8DqwJmrTfYECQ==", null, false, null, null, null, null, false, "Member" },
-                    { new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, "f266a75c-3448-43f8-8bff-fb7e7cdd4be9", "manager@gmail.com", false, "System", null, "ProjectManager", false, null, null, "PROJECTMANAGER", "AQAAAAIAAYagAAAAEErM9P/y/5XH9FxwvodXhsHdso1OXmkoI8bMCQVwUrXGHBlLHfMsZ1/VwDzPDEF6gA==", null, false, null, null, null, null, false, "ProjectManager" },
-                    { new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, "d1a1cf3c-6832-4cda-943b-f98b64f7a0cf", "company@gmail.com", false, "System", null, "Company", false, null, null, "COMPANY", "AQAAAAIAAYagAAAAEOSI7uUBiGqLIMHeKfCbyc8E9dLjpOljOs7UagssAqcf1AIXB1s0tlvP0ICMm8VxyQ==", null, false, null, null, null, null, false, "Company" }
+                    { new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "b87e469f-332d-4b82-93c5-20ff3aedcdc4", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "admin@gmail.com", false, "Admin", null, false, null, null, null, "ADMIN", null, "AQAAAAIAAYagAAAAECwXZjLIakoY+Mjzq458Oa1tOwJuzy/v7iR6RkJH+2rLv2NgZrhSXLtarECY3umJ/g==", null, false, null, null, null, null, false, "admin" },
+                    { new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "4ceaa328-827c-4aba-9dbf-7ce4fb0f4375", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "member@gmail.com", false, "Member", null, false, null, null, null, "Member", null, "AQAAAAIAAYagAAAAEBKTMIeuN1+GF+gcTVBlfnSbRE8t599SJFEq3uayQ3iLgtZ6Mqp+JEDYtfxB0HY5pA==", null, false, null, null, null, null, false, "Member" },
+                    { new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "52005655-22c4-417a-9e17-1c69ac150a7c", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "manager@gmail.com", false, "ProjectManager", null, false, null, null, null, "PROJECTMANAGER", null, "AQAAAAIAAYagAAAAEJKRdzvlut1jBqPDH+Odtoo1FTisDuMQzpsCVnbp8Vde+mtVBphCJ5buz4s+NK3ALA==", null, false, null, null, null, null, false, "ProjectManager" },
+                    { new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "0b2e9e8d-d78e-4922-92aa-be031aaa11aa", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "businessowner@gmail.com", false, "BusinessOwner", null, false, null, null, null, "BUSINESSOWNER", null, "AQAAAAIAAYagAAAAEGwb91Gs/S0ZRYNfrCGuKpelWpSD7D/KNkEMCunX5AtUNzhwwHZARSqXGRAJASUuUg==", null, false, null, null, null, null, false, "BusinessOwner" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -243,26 +257,18 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_ManagedById",
+                table: "AspNetUsers",
+                column: "ManagedById");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notifications_CreatedAt",
-                schema: "notification",
-                table: "Notifications",
-                column: "CreatedAt");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Notifications_IsRead",
-                schema: "notification",
-                table: "Notifications",
-                column: "IsRead");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId",
-                schema: "notification",
                 table: "Notifications",
                 column: "UserId");
         }
@@ -286,8 +292,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Notifications",
-                schema: "notification");
+                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
