@@ -5,6 +5,6 @@
         Admin,
         Member,
         ProjectManager,
-        Company
+        BusinessOwner
     }
 }

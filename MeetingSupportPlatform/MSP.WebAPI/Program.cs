@@ -1,8 +1,9 @@
 //using AuthService.Application.Extensions;
-using MSP.Infrastructure.Extensions;
-using MSP.Application.Extensions;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using MSP.Application.Extensions;
+using MSP.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,10 +11,44 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddInfrastuctureService(builder.Configuration);
 builder.Services.AddApplicationService(builder.Configuration);
+builder.Services.AddAuthorization();
+
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "MSP API",
+        Version = "v1"
+    });
+
+    // Thêm JWT Bearer Authentication
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 builder.Services.AddHttpClient();
 
 // Add Hangfire
@@ -21,15 +56,14 @@ builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DbConnectionString")));
 builder.Services.AddHangfireServer();
 
-// Add Google Authentication
-builder.Services.AddAuthentication()
-    .AddGoogle(options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
-    });
 
-builder.Services.AddAuthorization();
+
+
+
+
+
+// Google Authentication đã được cấu hình trong AuthenticationExtension
+
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -59,13 +93,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseHangfireDashboard();
+// Thêm routing
+app.UseRouting();
 
-//app.UseInfrastructurePolicy();
+app.UseInfrastructurePolicy();
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"[TRACE] Request {context.Request.Method} {context.Request.Path}");
+    await next();
+    Console.WriteLine($"[TRACE] Response {context.Response.StatusCode} for {context.Request.Path}");
+});
 app.UseCors("AllowWeb");
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseHangfireDashboard();
 app.MapControllers();
-
 app.Run();

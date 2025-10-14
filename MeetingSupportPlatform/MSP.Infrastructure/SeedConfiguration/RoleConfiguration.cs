@@ -31,8 +31,8 @@ namespace MSP.Infrastructure.SeedConfiguration
                 new IdentityRole<Guid>
                 {
                     Id = Guid.Parse("d1e2f3a4-b5c6-4789-1234-56789abcdef3"),
-                    Name = UserRoleEnum.Company.ToString(),
-                    NormalizedName = UserRoleEnum.Company.ToString().ToUpper()
+                    Name = UserRoleEnum.BusinessOwner.ToString(),
+                    NormalizedName = UserRoleEnum.BusinessOwner.ToString().ToUpper()
                 }
             );
         }

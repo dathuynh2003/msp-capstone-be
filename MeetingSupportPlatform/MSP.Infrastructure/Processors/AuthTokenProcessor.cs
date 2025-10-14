@@ -31,7 +31,7 @@ namespace MSP.Infrastructure.Processors
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-
+                new Claim("fullName", user.FullName),
                 new Claim("userId", user.Id.ToString()),
                 new Claim("role", string.Join(",", roles))
             };
@@ -65,12 +65,17 @@ namespace MSP.Infrastructure.Processors
 
         public void WriteAuthTokenAsHttpOnlyCookie(string cookieName, string token, DateTime expiration)
         {
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, token, new CookieOptions
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                throw new InvalidOperationException("HttpContext is not available.");
+            }
+            httpContext.Response.Cookies.Append(cookieName, token, new CookieOptions
             {
                 HttpOnly = true,
                 Expires = expiration,
                 IsEssential = true,
-                Secure = true,
+                Secure = false,
                 SameSite = SameSiteMode.Strict,
             });
         }
