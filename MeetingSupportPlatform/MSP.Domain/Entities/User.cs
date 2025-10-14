@@ -12,6 +12,7 @@ namespace MSP.Domain.Entities
         public string? Provider { get; set; }
         public string? Organization { get; set; }
         public string? BusinessLicense { get; set; }
+        public bool IsApproved { get; set; } = false; // Trạng thái duyệt cho BusinessOwner
         public DateTime CreatedAt { get; set; }
 
         public Guid? ManagedById { get; set; }

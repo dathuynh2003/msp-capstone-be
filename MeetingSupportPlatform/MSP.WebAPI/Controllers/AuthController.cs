@@ -2,6 +2,9 @@
 using MSP.Application.Services.Interfaces.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using MSP.Application.Models.Requests;
+using MSP.Shared.Enums;
 
 namespace MSP.WebAPI.Controllers
 {
@@ -72,6 +75,33 @@ namespace MSP.WebAPI.Controllers
                 return BadRequest(ModelState);
             }
             var result = await _accountService.ResendConfirmationEmailAsync(resendRequest);
+            return Ok(result);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest("Refresh token is required.");
+            }
+            var rs = await _accountService.RefreshTokenAsync(request.RefreshToken);
+            return Ok(rs);
+        }
+
+        [HttpPost("approve-business-owner/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ApproveBusinessOwner(Guid userId)
+        {
+            var result = await _accountService.ApproveBusinessOwnerAsync(userId);
+            return Ok(result);
+        }
+
+        [HttpPost("reject-business-owner/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RejectBusinessOwner(Guid userId)
+        {
+            var result = await _accountService.RejectBusinessOwnerAsync(userId);
             return Ok(result);
         }
     }

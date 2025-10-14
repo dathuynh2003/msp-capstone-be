@@ -1,26 +1,36 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MSP.Infrastructure.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-
+using System.Threading.Tasks;
 namespace MSP.Infrastructure.Extensions
 {
-    public static class JWTAuthenticationScheme
+    public static class AuthenticationExtension
     {
-        public static IServiceCollection AddJWTAuthenticationScheme(this IServiceCollection services, IConfiguration config)
+        public static IServiceCollection AddAppAuthentication(this IServiceCollection services, IConfiguration config)
         {
-            //add JWT Service
-            services.AddAuthentication(opt =>
+
+            var authBuilder = services.AddAuthentication(opt =>
             {
+                //opt.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            });
+
+            // Add JWT
+            var jwtOptions = config.GetSection(JwtOptions.JwtOptionsKey).Get<JwtOptions>()
+                ?? throw new ArgumentException(nameof(JwtOptions));
+
+            authBuilder.AddJwtBearer(options =>
             {
-                var jwtOptions = config.GetSection(JwtOptions.JwtOptionsKey)
-                .Get<JwtOptions>() ?? throw new ArgumentException(nameof(JwtOptions));
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -29,10 +39,8 @@ namespace MSP.Infrastructure.Extensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtOptions.Issuer,
                     ValidAudience = jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
-
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret))
                 };
-                // Read the token from cookie (another request)
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
@@ -42,6 +50,14 @@ namespace MSP.Infrastructure.Extensions
                     }
                 };
             });
+
+            // Add Google
+            authBuilder.AddGoogle(options =>
+            {
+                options.ClientId = config["Authentication:Google:ClientId"] ?? "";
+                options.ClientSecret = config["Authentication:Google:ClientSecret"] ?? "";
+            });
+
             return services;
         }
     }

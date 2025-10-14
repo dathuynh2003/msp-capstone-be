@@ -11,10 +11,10 @@ namespace MSP.Infrastructure.Extensions
     {
         public static IServiceCollection AddInfrastuctureService(this IServiceCollection services, IConfiguration config)
         {
+            services.AddAppAuthentication(config);
             services.AddCustomDBContext(config);
             services.AddServices(config);
             services.AddGeminiService(config);
-
             return services;
         }
 

@@ -15,8 +15,7 @@ namespace MSP.Infrastructure.Extensions
             // JWT Add Authentication Scheme
             SharedServiceContainer.AddSharedServices<ApplicationDbContext>(services, config, config["MySerilog:FileName"]!);
 
-            // Thêm Identity (chỉ dành riêng cho Auth service)
-            services.AddIdentity<User, IdentityRole<Guid>>(opt =>
+            services.AddIdentityCore<User>(opt =>
             {
                 opt.Password.RequireDigit = true;
                 opt.Password.RequireLowercase = true;
@@ -25,8 +24,10 @@ namespace MSP.Infrastructure.Extensions
                 opt.Password.RequiredLength = 8;
                 opt.User.RequireUniqueEmail = true;
             })
-            .AddDefaultTokenProviders()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddSignInManager<SignInManager<User>>()
+            .AddDefaultTokenProviders();
 
             services.Configure<JwtOptions>(config.GetSection(JwtOptions.JwtOptionsKey));
             return services;

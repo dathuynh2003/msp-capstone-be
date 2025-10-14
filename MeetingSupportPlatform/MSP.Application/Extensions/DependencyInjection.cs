@@ -13,6 +13,8 @@ using MSP.Application.Services.Interfaces.Milestone;
 using MSP.Application.Services.Implementations.Milestone;
 using MSP.Application.Services.Interfaces.ProjectTask;
 using MSP.Application.Services.Implementations.ProjectTask;
+using MSP.Application.Services.Interfaces.Users;
+using MSP.Application.Services.Implementations.Users;
 
 namespace MSP.Application.Extensions
 {
@@ -27,6 +29,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<IProjectService, ProjectService>();
             services.AddScoped<IMilestoneService, MilestoneService>();
             services.AddScoped<IProjectTaskService, ProjectTaskService>();
+            services.AddScoped<IUserService, UserService>();
 
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(

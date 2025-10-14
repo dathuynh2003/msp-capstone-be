@@ -26,7 +26,7 @@ namespace MSP.Infrastructure.Extensions
                 .CreateLogger();
 
             //Add  JWT Authentication Scheme
-            JWTAuthenticationScheme.AddJWTAuthenticationScheme(services, config);
+            //services.AddAppAuthentication(config);
             return services;
         }
 
@@ -36,7 +36,7 @@ namespace MSP.Infrastructure.Extensions
             //Use global Exception
             app.UseMiddleware<GlobalException>();
             //Register middleware to block all outsides API calls
-            app.UseMiddleware<ListenToOnlyApiGateway>();
+            //app.UseMiddleware<ListenToOnlyApiGateway>();
             return app;
         }
     }
