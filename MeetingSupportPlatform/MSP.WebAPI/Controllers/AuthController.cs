@@ -89,20 +89,6 @@ namespace MSP.WebAPI.Controllers
             return Ok(rs);
         }
 
-        [HttpPost("approve-business-owner/{userId}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> ApproveBusinessOwner(Guid userId)
-        {
-            var result = await _accountService.ApproveBusinessOwnerAsync(userId);
-            return Ok(result);
-        }
 
-        [HttpPost("reject-business-owner/{userId}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> RejectBusinessOwner(Guid userId)
-        {
-            var result = await _accountService.RejectBusinessOwnerAsync(userId);
-            return Ok(result);
-        }
     }
 }

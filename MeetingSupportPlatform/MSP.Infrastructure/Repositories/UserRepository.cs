@@ -41,5 +41,9 @@ namespace AuthService.Infrastructure.Repositories
                     .Any(ur => ur.UserId == u.Id && ur.Name == UserRoleEnum.BusinessOwner.ToString()))
                 .ToListAsync();
         }
+
+
+
+
     }
 }

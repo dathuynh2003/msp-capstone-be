@@ -32,7 +32,7 @@ namespace MSP.Application.Services.Implementations.Auth
         {
             var userExists = await _userManager.FindByEmailAsync(registerRequest.Email) != null;
             if (userExists)
-                return ApiResponse<string>.ErrorResponse("User has already!");
+                return ApiResponse<string>.ErrorResponse(null, "Email này đã được sử dụng!");
 
             var role = registerRequest.Role switch
             {
@@ -46,6 +46,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 Email = registerRequest.Email,
                 UserName = registerRequest.Email,
                 FullName = registerRequest.FullName,
+                PhoneNumber = registerRequest.PhoneNumber,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 EmailConfirmed = false, // Email chưa được xác thực
                 CreatedAt = DateTime.UtcNow,
@@ -79,16 +80,16 @@ namespace MSP.Application.Services.Implementations.Auth
 
             _notificationService.SendEmailNotification(
                 user.Email,
-                "Confirm Your Email Address - Meeting Support Platform",
+                "Xác nhận email - Meeting Support Platform",
                 emailBody
             );
 
             // Thông báo khác nhau tùy theo role
             var message = role == UserRoleEnum.Member.ToString() 
-                ? "User created successfully! Please check your email to confirm your account."
-                : "User created successfully! Please check your email to confirm your account. Your account will be reviewed by admin before you can login.";
+                ? "Người dùng đã được tạo thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn."
+                : "Người dùng đã được tạo thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn. Tài khoản của bạn sẽ được admin xem xét trước khi bạn có thể đăng nhập.";
 
-            return ApiResponse<string>.SuccessResponse(message, "Registration successful. Please check your email for confirmation instructions.");
+            return ApiResponse<string>.SuccessResponse(message, "Đăng kí tài khoản thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn.");
         }
 
         public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest loginRequest)
@@ -96,18 +97,18 @@ namespace MSP.Application.Services.Implementations.Auth
             var user = await _userManager.FindByEmailAsync(loginRequest.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Invalid email or password.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Sai email hoặc mặt khẩu.");
             }
             if (!user.EmailConfirmed)
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Please confirm your email before logging in.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Vui lòng kiểm tra và xác nhận email trước khi đăng nhập.");
             }
             
             // Kiểm tra trạng thái approval cho BusinessOwner
             var roles = (await _userManager.GetRolesAsync(user)).ToArray();
             if (roles.Contains(UserRoleEnum.BusinessOwner.ToString()) && !user.IsApproved)
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account is pending admin approval. Please wait for approval before logging in.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Tài khoản của bạn đang chờ được admin duyệt. Vui lòng chờ duyệt trước khi đăng nhập.");
             }
             
             var (jwtToken, expiresAtUtc) = _authTokenProcessor.GenerateJwtToken(user, roles);
@@ -124,7 +125,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 AccessToken = jwtToken,
                 RefreshToken = refreshToken
             };
-            return ApiResponse<LoginResponse>.SuccessResponse(response, "Login successful.");
+            return ApiResponse<LoginResponse>.SuccessResponse(response, "Đăng nhập thành công.");
         }
 
         public async Task<ApiResponse<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest googleLoginRequest)
@@ -219,7 +220,7 @@ namespace MSP.Application.Services.Implementations.Auth
             var user = await _userManager.FindByEmailAsync(confirmEmailRequest.Email);
             if (user == null)
             {
-                return ApiResponse<string>.ErrorResponse("User not found.");
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
             }
 
             if (user.EmailConfirmed)
@@ -230,7 +231,7 @@ namespace MSP.Application.Services.Implementations.Auth
             var result = await _userManager.ConfirmEmailAsync(user, confirmEmailRequest.Token);
             if (!result.Succeeded)
             {
-                return ApiResponse<string>.ErrorResponse("Invalid confirmation token.");
+                return ApiResponse<string>.ErrorResponse(null, "Invalid confirmation token.");
             }
 
             // Tạo notification in-app lưu vào DB
@@ -251,7 +252,7 @@ namespace MSP.Application.Services.Implementations.Auth
             var user = await _userManager.FindByEmailAsync(resendRequest.Email);
             if (user == null)
             {
-                return ApiResponse<string>.ErrorResponse("User not found.");
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
             }
 
             if (user.EmailConfirmed)
@@ -264,77 +265,7 @@ namespace MSP.Application.Services.Implementations.Auth
             return ApiResponse<string>.SuccessResponse("Confirmation email sent successfully!", "Please check your email for confirmation instructions.");
         }
 
-        public async Task<ApiResponse<string>> ApproveBusinessOwnerAsync(Guid userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-            {
-                return ApiResponse<string>.ErrorResponse("User not found.");
-            }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            if (!roles.Contains(UserRoleEnum.BusinessOwner.ToString()))
-            {
-                return ApiResponse<string>.ErrorResponse("User is not a BusinessOwner.");
-            }
-
-            if (user.IsApproved)
-            {
-                return ApiResponse<string>.SuccessResponse("User is already approved.", "User is already approved.");
-            }
-
-            user.IsApproved = true;
-            var result = await _userManager.UpdateAsync(user);
-
-            if (!result.Succeeded)
-            {
-                return ApiResponse<string>.ErrorResponse("Failed to approve user.");
-            }
-
-            // Gửi notification cho user
-            await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
-            {
-                UserId = user.Id,
-                Title = "Tài khoản đã được duyệt",
-                Message = $"Chào mừng {user.FullName}! Tài khoản BusinessOwner của bạn đã được admin duyệt. Bạn có thể đăng nhập vào hệ thống.",
-                Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
-                Data = $"{{\"eventType\":\"AccountApproved\",\"userId\":\"{user.Id}\"}}"
-            });
-
-            return ApiResponse<string>.SuccessResponse("BusinessOwner approved successfully!", "User has been approved and can now login.");
-        }
-
-        public async Task<ApiResponse<string>> RejectBusinessOwnerAsync(Guid userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-            {
-                return ApiResponse<string>.ErrorResponse("User not found.");
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (!roles.Contains(UserRoleEnum.BusinessOwner.ToString()))
-            {
-                return ApiResponse<string>.ErrorResponse("User is not a BusinessOwner.");
-            }
-
-            if (user.IsApproved)
-            {
-                return ApiResponse<string>.ErrorResponse("Cannot reject an already approved user.");
-            }
-
-            // Gửi notification cho user
-            await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
-            {
-                UserId = user.Id,
-                Title = "Tài khoản bị từ chối",
-                Message = $"Xin chào {user.FullName}, tài khoản BusinessOwner của bạn đã bị từ chối. Vui lòng liên hệ admin để biết thêm chi tiết.",
-                Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
-                Data = $"{{\"eventType\":\"AccountRejected\",\"userId\":\"{user.Id}\"}}"
-            });
-
-            return ApiResponse<string>.SuccessResponse("BusinessOwner rejected successfully!", "User has been notified of rejection.");
-        }
 
     }
 }

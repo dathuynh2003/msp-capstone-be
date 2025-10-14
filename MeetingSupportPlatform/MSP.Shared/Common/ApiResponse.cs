@@ -20,7 +20,7 @@
 
         public static ApiResponse<T> ErrorResponse(T? Data, string message = "Request was failed", IEnumerable<string>? errors = null)
         {
-            return new ApiResponse<T>(false, message, default, errors);
+            return new ApiResponse<T>(false, message, Data, errors);
         }
     }
 }

@@ -1,12 +1,17 @@
-﻿using MSP.Domain.Entities;
+﻿using MSP.Application.Models.Responses.Users;
+using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
 namespace MSP.Application.Services.Interfaces.Users
 {
     public interface IUserService
     {
-        Task<ApiResponse<IEnumerable<User>>> GetBusinessOwnersAsync();
-        Task<ApiResponse<IEnumerable<User>>> GetPendingBusinessOwnersAsync();
+        Task<ApiResponse<IEnumerable<UserResponse>>> GetBusinessOwnersAsync();
+        Task<ApiResponse<IEnumerable<UserResponse>>> GetPendingBusinessOwnersAsync();
+
+        Task<ApiResponse<string>> ApproveBusinessOwnerAsync(Guid userId);
+        Task<ApiResponse<string>> RejectBusinessOwnerAsync(Guid userId);
+        Task<ApiResponse<string>> ToggleUserActiveStatusAsync(Guid userId);
     }
 }
 

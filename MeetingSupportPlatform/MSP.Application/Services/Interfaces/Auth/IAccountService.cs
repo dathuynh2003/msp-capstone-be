@@ -12,7 +12,6 @@ namespace MSP.Application.Services.Interfaces.Auth
         Task<ApiResponse<RefreshTokenResponse>> RefreshTokenAsync(string? refreshToken);
         Task<ApiResponse<string>> ConfirmEmailAsync(ConfirmEmailRequest confirmEmailRequest);
         Task<ApiResponse<string>> ResendConfirmationEmailAsync(ResendConfirmationEmailRequest resendRequest);
-        Task<ApiResponse<string>> ApproveBusinessOwnerAsync(Guid userId);
-        Task<ApiResponse<string>> RejectBusinessOwnerAsync(Guid userId);
+
     }
 }

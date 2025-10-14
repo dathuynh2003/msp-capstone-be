@@ -14,7 +14,7 @@ namespace MSP.Domain.Entities
         public string? BusinessLicense { get; set; }
         public bool IsApproved { get; set; } = false; // Trạng thái duyệt cho BusinessOwner
         public DateTime CreatedAt { get; set; }
-
+        public bool IsActive { get; set; } = true;
         public Guid? ManagedById { get; set; }
         public virtual User? ManagedBy { get; set; }
 
