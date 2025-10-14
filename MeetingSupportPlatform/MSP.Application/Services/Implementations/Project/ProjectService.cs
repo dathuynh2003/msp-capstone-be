@@ -129,6 +129,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.Owner.Id,
                     FullName = project.Owner.FullName,
                     Email = project.Owner.Email,
+                    AvatarUrl = project.Owner.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedBy = new GetUserResponse
@@ -136,6 +137,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.CreatedBy.Id,
                     FullName = project.CreatedBy.FullName,
                     Email = project.CreatedBy.Email,
+                    AvatarUrl = project.CreatedBy.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedAt = project.CreatedAt,
@@ -182,6 +184,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.Owner.Id,
                     FullName = project.Owner.FullName,
                     Email = project.Owner.Email,
+                    AvatarUrl = project.Owner.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedBy = new GetUserResponse
@@ -189,6 +192,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.CreatedBy.Id,
                     FullName = project.CreatedBy.FullName,
                     Email = project.CreatedBy.Email,
+                    AvatarUrl = project.CreatedBy.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedAt = project.CreatedAt,
@@ -229,6 +233,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.Owner.Id,
                     FullName = project.Owner.FullName,
                     Email = project.Owner.Email,
+                    AvatarUrl = project.Owner.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedBy = new GetUserResponse
@@ -236,6 +241,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.CreatedBy.Id,
                     FullName = project.CreatedBy.FullName,
                     Email = project.CreatedBy.Email,
+                    AvatarUrl = project.CreatedBy.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedAt = project.CreatedAt,
@@ -287,6 +293,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.Owner.Id,
                     FullName = project.Owner.FullName,
                     Email = project.Owner.Email,
+                    AvatarUrl = project.Owner.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedBy = new GetUserResponse
@@ -294,6 +301,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = project.CreatedBy.Id,
                     FullName = project.CreatedBy.FullName,
                     Email = project.CreatedBy.Email,
+                    AvatarUrl = project.CreatedBy.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
                 },
                 CreatedAt = project.CreatedAt,
@@ -390,6 +398,7 @@ namespace MSP.Application.Services.Implementations.Project
                     Id = pm.Member.Id,
                     FullName = pm.Member.FullName,
                     Email = pm.Member.Email,
+                    AvatarUrl = pm.Member.AvatarUrl,
                     Role = (await _userManager.GetRolesAsync(pm.Member)).FirstOrDefault() ?? string.Empty
                 }
             }).ToList());

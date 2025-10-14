@@ -28,11 +28,4 @@
 	<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\Requests\Milestone\" />
-    <Folder Include="Models\Requests\ProjectTask\" />
-    <Folder Include="Models\Responses\Milestone\" />
-    <Folder Include="Models\Responses\ProjectTask\" />
-  </ItemGroup>
-
 </Project>

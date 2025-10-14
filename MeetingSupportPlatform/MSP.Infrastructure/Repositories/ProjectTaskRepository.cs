@@ -11,6 +11,7 @@ namespace MSP.Infrastructure.Repositories
         {
             return await _context.ProjectTasks
                 .Include(pt => pt.Milestones)
+                .Include(pt => pt.User)
                 .Where(pt => pt.Milestones.Any(m => m.Id == milestoneId) && !pt.IsDeleted)
                 .ToListAsync();
         }

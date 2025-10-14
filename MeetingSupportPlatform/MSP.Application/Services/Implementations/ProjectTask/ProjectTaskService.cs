@@ -1,0 +1,349 @@
+﻿using Microsoft.EntityFrameworkCore;
+using MSP.Application.Models.Requests.ProjectTask;
+using MSP.Application.Models.Responses.Auth;
+using MSP.Application.Models.Responses.Milestone;
+using MSP.Application.Models.Responses.ProjectTask;
+using MSP.Application.Repositories;
+using MSP.Application.Services.Interfaces.ProjectTask;
+using MSP.Domain.Entities;
+using MSP.Shared.Common;
+
+namespace MSP.Application.Services.Implementations.ProjectTask
+{
+    public class ProjectTaskService : IProjectTaskService
+    {
+        private readonly IProjectTaskRepository _projectTaskRepository;
+        private readonly IProjectRepository _projectRepository;
+        private readonly IMilestoneRepository _milestoneRepository;
+
+        public ProjectTaskService(IProjectTaskRepository projectTaskRepository, IProjectRepository projectRepository, IMilestoneRepository milestoneRepository)
+        {
+            _projectTaskRepository = projectTaskRepository;
+            _projectRepository = projectRepository;
+            _milestoneRepository = milestoneRepository;
+        }
+
+        public async Task<ApiResponse<GetTaskResponse>> CreateTaskAsync(CreateTaskRequest request)
+        {
+            var project = await _projectRepository.GetByIdAsync(request.ProjectId);
+            if (project == null)
+            {
+                return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found");
+            }
+
+            // Load milestones trước nếu có
+            List<Domain.Entities.Milestone> milestones = new List<Domain.Entities.Milestone>();
+            if (request.MilestoneIds != null && request.MilestoneIds.Any())
+            {
+                    milestones = (await _milestoneRepository.GetAllAsync(
+                    include: q => q.Where(m => request.MilestoneIds.Contains(m.Id))
+                )).ToList();
+            }
+
+            // Khởi tạo task, gán milestones luôn vào collection
+            var task = new Domain.Entities.ProjectTask
+            {
+                ProjectId = request.ProjectId,
+                UserId = request.UserId,
+                Title = request.Title,
+                Description = request.Description,
+                Status = request.Status,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                CreatedAt = DateTime.UtcNow,
+                Milestones = milestones // Gán vào đây trực tiếp
+            };
+
+            await _projectTaskRepository.AddAsync(task);
+            await _projectTaskRepository.SaveChangesAsync();
+
+            // Map to response
+            var response = new GetTaskResponse
+            {
+                Id = task.Id,
+                ProjectId = task.ProjectId,
+                UserId = task.UserId,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                StartDate = task.StartDate,
+                EndDate = task.EndDate,
+                CreatedAt = task.CreatedAt,
+                UpdatedAt = task.UpdatedAt,
+                Milestones = milestones.Select(m => new GetMilestoneResponse
+                {
+                    Id = m.Id,
+                    ProjectId = m.ProjectId,
+                    Name = m.Name
+                }).ToArray()
+            };
+
+            return ApiResponse<GetTaskResponse>.SuccessResponse(response, "Task created successfully");
+        }
+
+
+        public async Task<ApiResponse<string>> DeleteTaskAsync(Guid taskId)
+        {
+            var task = await _projectTaskRepository.GetTaskByIdAsync(taskId);
+            if (task == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "Task not found");
+            }
+            await _projectTaskRepository.SoftDeleteAsync(task);
+            await _projectTaskRepository.SaveChangesAsync();
+            return ApiResponse<string>.SuccessResponse("Task deleted successfully");
+        }
+
+        public async Task<ApiResponse<GetTaskResponse>> GetTaskByIdAsync(Guid taskId)
+        {
+            var task = await _projectTaskRepository.GetTaskByIdAsync(taskId);
+            if (task == null)
+            {
+                return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
+            }
+            var response = new GetTaskResponse
+            {
+                Id = task.Id,
+                ProjectId = task.ProjectId,
+                UserId = task.UserId,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                StartDate = task.StartDate,
+                EndDate = task.EndDate,
+                CreatedAt = task.CreatedAt,
+                UpdatedAt = task.UpdatedAt,
+                User = new GetUserResponse
+                {
+                    Id = task.User.Id,
+                    Email = task.User.Email,
+                    FullName = task.User.FullName,
+                    AvatarUrl = task.User.AvatarUrl,
+                },
+                Milestones = task.Milestones?.Select(m => new GetMilestoneResponse
+                {
+                    Id = m.Id,
+                    ProjectId = m.ProjectId,
+                    Name = m.Name
+                }).ToArray()
+            };
+            return ApiResponse<GetTaskResponse>.SuccessResponse(response, "Task retrieved successfully");
+        }
+
+        public async Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByProjectIdAsync(PagingRequest request, Guid projectId)
+        {
+            var project = await _projectRepository.GetByIdAsync(projectId);
+            if (project == null)
+            {
+                return ApiResponse<PagingResponse<GetTaskResponse>>.ErrorResponse(null, "Project not found");
+            }
+
+            var tasks = await _projectTaskRepository.FindWithIncludePagedAsync(
+                predicate: p => p.ProjectId == projectId && !p.IsDeleted,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.Milestones),
+                pageNumber: request.PageIndex,
+                pageSize: request.PageSize,
+                asNoTracking: true);
+
+            if (tasks == null || !tasks.Any())
+            {
+                return ApiResponse<PagingResponse<GetTaskResponse>>.ErrorResponse(null, "No tasks found for the project");
+            }
+
+            var totalTasks = await _projectTaskRepository.CountAsync(p => p.ProjectId == projectId && !p.IsDeleted);
+
+            var response = new PagingResponse<GetTaskResponse>
+            {
+                Items = tasks.Select(task => new GetTaskResponse
+                {
+                    Id = task.Id,
+                    ProjectId = task.ProjectId,
+                    UserId = task.UserId,
+                    Title = task.Title,
+                    Description = task.Description,
+                    Status = task.Status,
+                    StartDate = task.StartDate,
+                    EndDate = task.EndDate,
+                    CreatedAt = task.CreatedAt,
+                    UpdatedAt = task.UpdatedAt,
+                    User = new GetUserResponse
+                    {
+                        Id = task.User.Id,
+                        Email = task.User.Email,
+                        FullName = task.User.FullName,
+                        AvatarUrl = task.User.AvatarUrl,
+                    },
+                    Milestones = task.Milestones?.Select(m => new GetMilestoneResponse
+                    {
+                        Id = m.Id,
+                        ProjectId = m.ProjectId,
+                        Name = m.Name
+                    }).ToArray()
+                }),
+                TotalItems = totalTasks,
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize
+            };
+
+            return ApiResponse<PagingResponse<GetTaskResponse>>.SuccessResponse(response);
+        }
+
+        public async Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByUserIdAsync(PagingRequest request, Guid userId)
+        {
+            var tasks = await _projectTaskRepository.FindWithIncludePagedAsync(
+                predicate: p => p.UserId == userId && !p.IsDeleted,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.Milestones),
+                pageNumber: request.PageIndex,
+                pageSize: request.PageSize,
+                asNoTracking: true);
+            if (tasks == null || !tasks.Any())
+            {
+                return ApiResponse<PagingResponse<GetTaskResponse>>.ErrorResponse(null, "No tasks found for the user");
+            }
+            var totalTasks = await _projectTaskRepository.CountAsync(p => p.UserId == userId && !p.IsDeleted);
+            var response = new PagingResponse<GetTaskResponse>
+            {
+                Items = tasks.Select(task => new GetTaskResponse
+                {
+                    Id = task.Id,
+                    ProjectId = task.ProjectId,
+                    UserId = task.UserId,
+                    Title = task.Title,
+                    Description = task.Description,
+                    Status = task.Status,
+                    StartDate = task.StartDate,
+                    EndDate = task.EndDate,
+                    CreatedAt = task.CreatedAt,
+                    UpdatedAt = task.UpdatedAt,
+                    User = new GetUserResponse
+                    {
+                        Id = task.User.Id,
+                        Email = task.User.Email,
+                        FullName = task.User.FullName,
+                        AvatarUrl = task.User.AvatarUrl,
+                    },
+                    Milestones = task.Milestones?.Select(m => new GetMilestoneResponse
+                    {
+                        Id = m.Id,
+                        ProjectId = m.ProjectId,
+                        Name = m.Name
+                    }).ToArray()
+                }),
+                TotalItems = totalTasks,
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize
+            };
+            return ApiResponse<PagingResponse<GetTaskResponse>>.SuccessResponse(response);
+        }
+
+        public async Task<ApiResponse<GetTaskResponse>> UpdateTaskAsync(UpdateTaskRequest request)
+        {
+            var task = await _projectTaskRepository.GetTaskByIdAsync(request.Id);
+            if (task == null)
+            {
+                return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
+            }
+            // Update task properties
+            task.Title = request.Title;
+            task.Description = request.Description;
+            task.Status = request.Status;
+            task.StartDate = request.StartDate;
+            task.EndDate = request.EndDate;
+            task.UpdatedAt = DateTime.UtcNow;
+            // Handle milestones if provided
+            if (request.MilestoneIds != null)
+            {
+                // Clear existing milestones
+                task.Milestones?.Clear();
+                if (request.MilestoneIds.Any())
+                {
+                    var milestones = await _milestoneRepository.GetAllAsync(
+                        include: q => q.Where(m => request.MilestoneIds.Contains(m.Id))
+                    );
+                    foreach (var milestone in milestones)
+                    {
+                        if (task.Milestones == null)
+                            task.Milestones = new List<Domain.Entities.Milestone>();
+                        task.Milestones.Add(milestone);
+                    }
+                }
+            }
+            await _projectTaskRepository.UpdateAsync(task);
+            await _projectTaskRepository.SaveChangesAsync();
+            // Map to response
+            var response = new GetTaskResponse
+            {
+                Id = task.Id,
+                ProjectId = task.ProjectId,
+                UserId = task.UserId,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                StartDate = task.StartDate,
+                EndDate = task.EndDate,
+                CreatedAt = task.CreatedAt,
+                UpdatedAt = task.UpdatedAt,
+                User = new GetUserResponse
+                {
+                    Id = task.User.Id,
+                    Email = task.User.Email,
+                    FullName = task.User.FullName,
+                    AvatarUrl = task.User.AvatarUrl,
+                },
+                Milestones = task.Milestones?.Select(m => new GetMilestoneResponse
+                {
+                    Id = m.Id,
+                    ProjectId = m.ProjectId,
+                    Name = m.Name
+                }).ToArray()
+            };
+            return ApiResponse<GetTaskResponse>.SuccessResponse(response, "Task updated successfully");
+        }
+
+        public async Task<ApiResponse<List<GetTaskResponse>>> GetTasksByMilestoneIdAsync(Guid milestoneId)
+        {
+            var milestone = await _milestoneRepository.GetMilestoneByIdAsync(milestoneId);
+            if (milestone == null)
+            {
+                return ApiResponse<List<GetTaskResponse>>.ErrorResponse(null, "Milestone not found");
+            }
+            var tasks = await _projectTaskRepository.GetTasksByMilestoneIdAsync(milestoneId);
+            if (tasks == null || !tasks.Any())
+            {
+                return ApiResponse<List<GetTaskResponse>>.ErrorResponse(null, "No tasks found for the milestone");
+            }
+            var response = tasks.Select(task => new GetTaskResponse
+            {
+                Id = task.Id,
+                ProjectId = task.ProjectId,
+                UserId = task.UserId,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                StartDate = task.StartDate,
+                EndDate = task.EndDate,
+                CreatedAt = task.CreatedAt,
+                UpdatedAt = task.UpdatedAt,
+                User = new GetUserResponse
+                {
+                    Id = task.User.Id,
+                    Email = task.User.Email,
+                    FullName = task.User.FullName,
+                    AvatarUrl = task.User.AvatarUrl,
+                },
+                Milestones = task.Milestones?.Select(m => new GetMilestoneResponse
+                {
+                    Id = m.Id,
+                    ProjectId = m.ProjectId,
+                    Name = m.Name
+                }).ToArray()
+            }).ToList();
+
+            return ApiResponse<List<GetTaskResponse>>.SuccessResponse(response, "Tasks retrieved successfully");
+        }
+    }
+}

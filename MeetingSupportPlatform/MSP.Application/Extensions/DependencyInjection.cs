@@ -9,6 +9,10 @@ using MSP.Application.Services.Implementations.Summarize;
 using MSP.Application.Services.Interfaces.Summarize;
 using MSP.Application.Services.Interfaces.Project;
 using MSP.Application.Services.Implementations.Project;
+using MSP.Application.Services.Interfaces.Milestone;
+using MSP.Application.Services.Implementations.Milestone;
+using MSP.Application.Services.Interfaces.ProjectTask;
+using MSP.Application.Services.Implementations.ProjectTask;
 
 namespace MSP.Application.Extensions
 {
@@ -21,6 +25,8 @@ namespace MSP.Application.Extensions
             services.AddScoped<INotificationService, MSP.Application.Services.Implementations.Notification.NotificationService>();
             services.AddScoped<ISummarizeTextService, SummarizeTextService>();
             services.AddScoped<IProjectService, ProjectService>();
+            services.AddScoped<IMilestoneService, MilestoneService>();
+            services.AddScoped<IProjectTaskService, ProjectTaskService>();
 
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(

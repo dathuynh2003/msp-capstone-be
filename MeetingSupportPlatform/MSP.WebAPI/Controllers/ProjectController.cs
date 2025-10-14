@@ -6,7 +6,7 @@ using MSP.Shared.Common;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("api/v1/project")]
+    [Route("api/v1/projects")]
     [ApiController]
     public class ProjectController : ControllerBase
     {
