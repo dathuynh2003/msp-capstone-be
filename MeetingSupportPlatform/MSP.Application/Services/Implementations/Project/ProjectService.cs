@@ -114,37 +114,45 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found");
             }
 
-            var response = await Task.WhenAll(projects.Select(async project => new GetProjectResponse
-            {
-                Id = project.Id,
-                Name = project.Name,
-                Description = project.Description,
-                StartDate = project.StartDate,
-                EndDate = project.EndDate,
-                OwnerId = project.OwnerId,
-                CreatedById = project.CreatedById,
-                Status = project.Status,
-                Owner = new GetUserResponse
-                {
-                    Id = project.Owner.Id,
-                    FullName = project.Owner.FullName,
-                    Email = project.Owner.Email,
-                    AvatarUrl = project.Owner.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedBy = new GetUserResponse
-                {
-                    Id = project.CreatedBy.Id,
-                    FullName = project.CreatedBy.FullName,
-                    Email = project.CreatedBy.Email,
-                    AvatarUrl = project.CreatedBy.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedAt = project.CreatedAt,
-                UpdatedAt = project.UpdatedAt
-            }).ToList());
+            var response = new List<GetProjectResponse>();
 
-            if (response.Length == 0)
+            foreach (var project in projects)
+            {
+                var ownerRole = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty;
+                var createdByRole = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty;
+
+                response.Add(new GetProjectResponse
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    StartDate = project.StartDate,
+                    EndDate = project.EndDate,
+                    OwnerId = project.OwnerId,
+                    CreatedById = project.CreatedById,
+                    Status = project.Status,
+                    Owner = new GetUserResponse
+                    {
+                        Id = project.Owner.Id,
+                        FullName = project.Owner.FullName,
+                        Email = project.Owner.Email,
+                        AvatarUrl = project.Owner.AvatarUrl,
+                        Role = ownerRole
+                    },
+                    CreatedBy = new GetUserResponse
+                    {
+                        Id = project.CreatedBy.Id,
+                        FullName = project.CreatedBy.FullName,
+                        Email = project.CreatedBy.Email,
+                        AvatarUrl = project.CreatedBy.AvatarUrl,
+                        Role = createdByRole
+                    },
+                    CreatedAt = project.CreatedAt,
+                    UpdatedAt = project.UpdatedAt
+                });
+            }
+
+            if (response.Count == 0)
             {
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No results found. Try adjusting your search criteria.");
             }
@@ -218,37 +226,45 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found for the specified Business Owner");
             }
 
-            var response = await Task.WhenAll(projects.Select(async project => new GetProjectResponse
-            {
-                Id = project.Id,
-                Name = project.Name,
-                Description = project.Description,
-                StartDate = project.StartDate,
-                EndDate = project.EndDate,
-                OwnerId = project.OwnerId,
-                CreatedById = project.CreatedById,
-                Status = project.Status,
-                Owner = new GetUserResponse
-                {
-                    Id = project.Owner.Id,
-                    FullName = project.Owner.FullName,
-                    Email = project.Owner.Email,
-                    AvatarUrl = project.Owner.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedBy = new GetUserResponse
-                {
-                    Id = project.CreatedBy.Id,
-                    FullName = project.CreatedBy.FullName,
-                    Email = project.CreatedBy.Email,
-                    AvatarUrl = project.CreatedBy.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedAt = project.CreatedAt,
-                UpdatedAt = project.UpdatedAt
-            }).ToList());
+            var response = new List<GetProjectResponse>();
 
-            if (response.Length == 0)
+            foreach (var project in projects)
+            {
+                var ownerRole = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty;
+                var createdByRole = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty;
+
+                response.Add(new GetProjectResponse
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    StartDate = project.StartDate,
+                    EndDate = project.EndDate,
+                    OwnerId = project.OwnerId,
+                    CreatedById = project.CreatedById,
+                    Status = project.Status,
+                    Owner = new GetUserResponse
+                    {
+                        Id = project.Owner.Id,
+                        FullName = project.Owner.FullName,
+                        Email = project.Owner.Email,
+                        AvatarUrl = project.Owner.AvatarUrl,
+                        Role = ownerRole
+                    },
+                    CreatedBy = new GetUserResponse
+                    {
+                        Id = project.CreatedBy.Id,
+                        FullName = project.CreatedBy.FullName,
+                        Email = project.CreatedBy.Email,
+                        AvatarUrl = project.CreatedBy.AvatarUrl,
+                        Role = createdByRole
+                    },
+                    CreatedAt = project.CreatedAt,
+                    UpdatedAt = project.UpdatedAt
+                });
+            }
+
+            if (response.Count == 0)
             {
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No results found. Try adjusting your search criteria.");
             }
@@ -278,37 +294,45 @@ namespace MSP.Application.Services.Implementations.Project
             {
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found for the specified Manager");
             }
-            var response = await Task.WhenAll(projects.Select(async project => new GetProjectResponse
-            {
-                Id = project.Id,
-                Name = project.Name,
-                Description = project.Description,
-                StartDate = project.StartDate,
-                EndDate = project.EndDate,
-                OwnerId = project.OwnerId,
-                CreatedById = project.CreatedById,
-                Status = project.Status,
-                Owner = new GetUserResponse
-                {
-                    Id = project.Owner.Id,
-                    FullName = project.Owner.FullName,
-                    Email = project.Owner.Email,
-                    AvatarUrl = project.Owner.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedBy = new GetUserResponse
-                {
-                    Id = project.CreatedBy.Id,
-                    FullName = project.CreatedBy.FullName,
-                    Email = project.CreatedBy.Email,
-                    AvatarUrl = project.CreatedBy.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty
-                },
-                CreatedAt = project.CreatedAt,
-                UpdatedAt = project.UpdatedAt
-            }).ToList());
+            var response = new List<GetProjectResponse>();
 
-            if (response.Length == 0)
+            foreach (var project in projects)
+            {
+                var ownerRole = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty;
+                var createdByRole = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty;
+
+                response.Add(new GetProjectResponse
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    StartDate = project.StartDate,
+                    EndDate = project.EndDate,
+                    OwnerId = project.OwnerId,
+                    CreatedById = project.CreatedById,
+                    Status = project.Status,
+                    Owner = new GetUserResponse
+                    {
+                        Id = project.Owner.Id,
+                        FullName = project.Owner.FullName,
+                        Email = project.Owner.Email,
+                        AvatarUrl = project.Owner.AvatarUrl,
+                        Role = ownerRole
+                    },
+                    CreatedBy = new GetUserResponse
+                    {
+                        Id = project.CreatedBy.Id,
+                        FullName = project.CreatedBy.FullName,
+                        Email = project.CreatedBy.Email,
+                        AvatarUrl = project.CreatedBy.AvatarUrl,
+                        Role = createdByRole
+                    },
+                    CreatedAt = project.CreatedAt,
+                    UpdatedAt = project.UpdatedAt
+                });
+            }
+
+            if (response.Count == 0)
             {
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No results found. Try adjusting your search criteria.");
             }
@@ -387,23 +411,32 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<List<GetProjectMemberResponse>>.ErrorResponse(null, "No members found for the specified project");
             }
 
-            var response = await Task.WhenAll(projectMembers.Select(async pm => new GetProjectMemberResponse
-            {
-                Id = pm.Id,
-                ProjectId = pm.ProjectId,
-                UserId = pm.MemberId,
-                JoinedAt = pm.JoinedAt,
-                Member = new GetUserResponse
-                {
-                    Id = pm.Member.Id,
-                    FullName = pm.Member.FullName,
-                    Email = pm.Member.Email,
-                    AvatarUrl = pm.Member.AvatarUrl,
-                    Role = (await _userManager.GetRolesAsync(pm.Member)).FirstOrDefault() ?? string.Empty
-                }
-            }).ToList());
+            var response = new List<GetProjectMemberResponse>();
 
-            return ApiResponse<List<GetProjectMemberResponse>>.SuccessResponse(response.ToList());
+            foreach (var pm in projectMembers)
+            {
+                var roles = await _userManager.GetRolesAsync(pm.Member);
+                var role = roles.FirstOrDefault() ?? string.Empty;
+
+                response.Add(new GetProjectMemberResponse
+                {
+                    Id = pm.Id,
+                    ProjectId = pm.ProjectId,
+                    UserId = pm.MemberId,
+                    JoinedAt = pm.JoinedAt,
+                    Member = new GetUserResponse
+                    {
+                        Id = pm.Member.Id,
+                        FullName = pm.Member.FullName,
+                        Email = pm.Member.Email,
+                        AvatarUrl = pm.Member.AvatarUrl,
+                        Role = role
+                    }
+                });
+            }
+
+            return ApiResponse<List<GetProjectMemberResponse>>.SuccessResponse(response);
         }
+
     }
 }
