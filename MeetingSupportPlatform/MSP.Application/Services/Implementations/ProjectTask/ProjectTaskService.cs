@@ -31,17 +31,13 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found");
             }
 
-            // Load milestones trước nếu có
-            List<Domain.Entities.Milestone> milestones = new List<Domain.Entities.Milestone>();
-            if (request.MilestoneIds != null && request.MilestoneIds.Any())
-            {
-                    milestones = (await _milestoneRepository.GetAllAsync(
-                    include: q => q.Where(m => request.MilestoneIds.Contains(m.Id))
-                )).ToList();
-            }
+            //var user = await _userRepository.FindAsync(request.UserId);
+            //if (user == null)
+            //{
+            //    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");
+            //}
 
-            // Khởi tạo task, gán milestones luôn vào collection
-            var task = new Domain.Entities.ProjectTask
+            var newTask = new Domain.Entities.ProjectTask
             {
                 ProjectId = request.ProjectId,
                 UserId = request.UserId,
@@ -50,27 +46,36 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 Status = request.Status,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
-                CreatedAt = DateTime.UtcNow,
-                Milestones = milestones // Gán vào đây trực tiếp
+                CreatedAt = DateTime.UtcNow
             };
 
-            await _projectTaskRepository.AddAsync(task);
+            // Gán milestone nếu có
+            if (request.MilestoneIds != null && request.MilestoneIds.Any())
+            {
+                var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
+                if (milestones == null || !milestones.Any())
+                {
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found");
+                }
+                newTask.Milestones = milestones.ToList();
+            }
+
+            await _projectTaskRepository.AddAsync(newTask);
             await _projectTaskRepository.SaveChangesAsync();
 
-            // Map to response
             var response = new GetTaskResponse
             {
-                Id = task.Id,
-                ProjectId = task.ProjectId,
-                UserId = task.UserId,
-                Title = task.Title,
-                Description = task.Description,
-                Status = task.Status,
-                StartDate = task.StartDate,
-                EndDate = task.EndDate,
-                CreatedAt = task.CreatedAt,
-                UpdatedAt = task.UpdatedAt,
-                Milestones = milestones.Select(m => new GetMilestoneResponse
+                Id = newTask.Id,
+                ProjectId = newTask.ProjectId,
+                UserId = newTask.UserId,
+                Title = newTask.Title,
+                Description = newTask.Description,
+                Status = newTask.Status,
+                StartDate = newTask.StartDate,
+                EndDate = newTask.EndDate,
+                CreatedAt = newTask.CreatedAt,
+                UpdatedAt = newTask.UpdatedAt,
+                Milestones = newTask.Milestones?.Select(m => new GetMilestoneResponse
                 {
                     Id = m.Id,
                     ProjectId = m.ProjectId,
@@ -80,7 +85,6 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
             return ApiResponse<GetTaskResponse>.SuccessResponse(response, "Task created successfully");
         }
-
 
         public async Task<ApiResponse<string>> DeleteTaskAsync(Guid taskId)
         {
@@ -247,34 +251,42 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             {
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
             }
-            // Update task properties
+
+            //var user = await _projectTaskRepository._context.Users.FindAsync(request.UserId);
+            //if (user == null)
+            //{
+            //    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");
+            //}
+
             task.Title = request.Title;
             task.Description = request.Description;
             task.Status = request.Status;
             task.StartDate = request.StartDate;
             task.EndDate = request.EndDate;
+            task.UserId = request.UserId;
             task.UpdatedAt = DateTime.UtcNow;
-            // Handle milestones if provided
+
+            // Cập nhật milestones (xóa các milestone hiện tại, gán milestones mới)
             if (request.MilestoneIds != null)
             {
-                // Clear existing milestones
-                task.Milestones?.Clear();
-                if (request.MilestoneIds.Any())
+                var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
+                if (milestones == null || milestones.Count() != request.MilestoneIds.Length)
                 {
-                    var milestones = await _milestoneRepository.GetAllAsync(
-                        include: q => q.Where(m => request.MilestoneIds.Contains(m.Id))
-                    );
-                    foreach (var milestone in milestones)
-                    {
-                        if (task.Milestones == null)
-                            task.Milestones = new List<Domain.Entities.Milestone>();
-                        task.Milestones.Add(milestone);
-                    }
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found");
+                }
+
+                // Xóa các milestones cũ
+                task.Milestones.Clear();
+                // Thêm milestones mới
+                foreach (var milestone in milestones)
+                {
+                    task.Milestones.Add(milestone);
                 }
             }
+
             await _projectTaskRepository.UpdateAsync(task);
             await _projectTaskRepository.SaveChangesAsync();
-            // Map to response
+
             var response = new GetTaskResponse
             {
                 Id = task.Id,
@@ -301,8 +313,10 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                     Name = m.Name
                 }).ToArray()
             };
+
             return ApiResponse<GetTaskResponse>.SuccessResponse(response, "Task updated successfully");
         }
+
 
         public async Task<ApiResponse<List<GetTaskResponse>>> GetTasksByMilestoneIdAsync(Guid milestoneId)
         {

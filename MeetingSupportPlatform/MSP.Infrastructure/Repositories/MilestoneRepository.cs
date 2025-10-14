@@ -27,5 +27,13 @@ namespace MSP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
         }
 
+        public async Task<IEnumerable<Milestone>> GetMilestonesByIdsAsync(IEnumerable<Guid> ids)
+        {
+            return await _context.Milestones
+                .Where(m => ids.Contains(m.Id) && !m.IsDeleted)
+                .Include(m => m.ProjectTasks)
+                .Include(m => m.User)
+                .ToListAsync();
+        }
     }
 }

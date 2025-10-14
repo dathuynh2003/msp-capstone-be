@@ -7,5 +7,6 @@ namespace MSP.Application.Repositories
     {
         Task<IEnumerable<Milestone>> GetMilestonesByProjectIdAsync(Guid projectId);
         Task<Milestone?> GetMilestoneByIdAsync(Guid id);
+        Task<IEnumerable<Milestone>> GetMilestonesByIdsAsync(IEnumerable<Guid> ids);
     }
 }
