@@ -7,8 +7,8 @@ namespace MSP.Domain.Entities
         public Guid ProjectId { get; set; }
         public virtual Project Project { get; set; }
 
-        public Guid UserId { get; set; }
-        public virtual User User { get; set; }
+        public Guid? UserId { get; set; }
+        public virtual User? User { get; set; }
 
         public Guid? TodoId { get; set; }
         public virtual Todo? Todo { get; set; }
