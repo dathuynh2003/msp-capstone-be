@@ -1,18 +1,78 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
+
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
 namespace MSP.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class AddEntities : Migration
+    public partial class AddSeedUser : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Feature",
+                name: "AspNetRoles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FullName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    RefreshToken = table.Column<string>(type: "text", nullable: true),
+                    RefreshTokenExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    AvatarUrl = table.Column<string>(type: "text", nullable: true),
+                    GoogleId = table.Column<string>(type: "text", nullable: true),
+                    Provider = table.Column<string>(type: "text", nullable: true),
+                    Organization = table.Column<string>(type: "text", nullable: true),
+                    BusinessLicense = table.Column<string>(type: "text", nullable: true),
+                    IsApproved = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    ManagedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "text", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_AspNetUsers_ManagedById",
+                        column: x => x.ManagedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Features",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -28,11 +88,145 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Feature", x => x.Id);
+                    table.PrimaryKey("PK_Features", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Package",
+                name: "AspNetRoleClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserLogins",
+                columns: table => new
+                {
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserTokens",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ActorId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    Message = table.Column<string>(type: "text", nullable: false),
+                    Type = table.Column<string>(type: "text", nullable: true),
+                    EntityId = table.Column<string>(type: "text", nullable: true),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false),
+                    Data = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Packages",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -48,9 +242,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Package", x => x.Id);
+                    table.PrimaryKey("PK_Packages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Package_AspNetUsers_CreatedById",
+                        name: "FK_Packages_AspNetUsers_CreatedById",
                         column: x => x.CreatedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
@@ -58,7 +252,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Project",
+                name: "Projects",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -75,15 +269,15 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Project", x => x.Id);
+                    table.PrimaryKey("PK_Projects", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Project_AspNetUsers_CreatedById",
+                        name: "FK_Projects_AspNetUsers_CreatedById",
                         column: x => x.CreatedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Project_AspNetUsers_OwnerId",
+                        name: "FK_Projects_AspNetUsers_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
@@ -101,21 +295,21 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_PackageFeatures", x => new { x.PackageId, x.FeatureId });
                     table.ForeignKey(
-                        name: "FK_PackageFeatures_Feature_FeatureId",
+                        name: "FK_PackageFeatures_Features_FeatureId",
                         column: x => x.FeatureId,
-                        principalTable: "Feature",
+                        principalTable: "Features",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PackageFeatures_Package_PackageId",
+                        name: "FK_PackageFeatures_Packages_PackageId",
                         column: x => x.PackageId,
-                        principalTable: "Package",
+                        principalTable: "Packages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Subscription",
+                name: "Subscriptions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -134,23 +328,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Subscription", x => x.Id);
+                    table.PrimaryKey("PK_Subscriptions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Subscription_AspNetUsers_UserId",
+                        name: "FK_Subscriptions_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Subscription_Package_PackageId",
+                        name: "FK_Subscriptions_Packages_PackageId",
                         column: x => x.PackageId,
-                        principalTable: "Package",
+                        principalTable: "Packages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Document",
+                name: "Documents",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -166,23 +360,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Document", x => x.Id);
+                    table.PrimaryKey("PK_Documents", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Document_AspNetUsers_OwnerId",
+                        name: "FK_Documents_AspNetUsers_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Document_Project_ProjectId",
+                        name: "FK_Documents_Projects_ProjectId",
                         column: x => x.ProjectId,
-                        principalTable: "Project",
+                        principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Milestone",
+                name: "Milestones",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -197,23 +391,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Milestone", x => x.Id);
+                    table.PrimaryKey("PK_Milestones", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Milestone_AspNetUsers_UserId",
+                        name: "FK_Milestones_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Milestone_Project_ProjectId",
+                        name: "FK_Milestones_Projects_ProjectId",
                         column: x => x.ProjectId,
-                        principalTable: "Project",
+                        principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProjectMember",
+                name: "ProjectMembers",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -226,23 +420,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProjectMember", x => x.Id);
+                    table.PrimaryKey("PK_ProjectMembers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ProjectMember_AspNetUsers_MemberId",
+                        name: "FK_ProjectMembers_AspNetUsers_MemberId",
                         column: x => x.MemberId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ProjectMember_Project_ProjectId",
+                        name: "FK_ProjectMembers_Projects_ProjectId",
                         column: x => x.ProjectId,
-                        principalTable: "Project",
+                        principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Meeting",
+                name: "Meetings",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -263,23 +457,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Meeting", x => x.Id);
+                    table.PrimaryKey("PK_Meetings", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Meeting_AspNetUsers_CreatedById",
+                        name: "FK_Meetings_AspNetUsers_CreatedById",
                         column: x => x.CreatedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Meeting_Milestone_MilestoneId",
+                        name: "FK_Meetings_Milestones_MilestoneId",
                         column: x => x.MilestoneId,
-                        principalTable: "Milestone",
+                        principalTable: "Milestones",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Meeting_Project_ProjectId",
+                        name: "FK_Meetings_Projects_ProjectId",
                         column: x => x.ProjectId,
-                        principalTable: "Project",
+                        principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -301,15 +495,15 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_MeetingUsers_Meeting_MeetingId",
+                        name: "FK_MeetingUsers_Meetings_MeetingId",
                         column: x => x.MeetingId,
-                        principalTable: "Meeting",
+                        principalTable: "Meetings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Todo",
+                name: "Todos",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -325,23 +519,23 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Todo", x => x.Id);
+                    table.PrimaryKey("PK_Todos", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Todo_AspNetUsers_UserId",
+                        name: "FK_Todos_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Todo_Meeting_MeetingId",
+                        name: "FK_Todos_Meetings_MeetingId",
                         column: x => x.MeetingId,
-                        principalTable: "Meeting",
+                        principalTable: "Meetings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProjectTask",
+                name: "ProjectTasks",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -359,29 +553,29 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProjectTask", x => x.Id);
+                    table.PrimaryKey("PK_ProjectTasks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ProjectTask_AspNetUsers_UserId",
+                        name: "FK_ProjectTasks_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_ProjectTask_Project_ProjectId",
+                        name: "FK_ProjectTasks_Projects_ProjectId",
                         column: x => x.ProjectId,
-                        principalTable: "Project",
+                        principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ProjectTask_Todo_TodoId",
+                        name: "FK_ProjectTasks_Todos_TodoId",
                         column: x => x.TodoId,
-                        principalTable: "Todo",
+                        principalTable: "Todos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Comment",
+                name: "Comments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -394,17 +588,17 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Comment", x => x.Id);
+                    table.PrimaryKey("PK_Comments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Comment_AspNetUsers_UserId",
+                        name: "FK_Comments_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Comment_ProjectTask_TaskId",
+                        name: "FK_Comments_ProjectTasks_TaskId",
                         column: x => x.TaskId,
-                        principalTable: "ProjectTask",
+                        principalTable: "ProjectTasks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -420,80 +614,127 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_MilestoneTasks", x => new { x.MilestoneId, x.ProjectTaskId });
                     table.ForeignKey(
-                        name: "FK_MilestoneTasks_Milestone_MilestoneId",
+                        name: "FK_MilestoneTasks_Milestones_MilestoneId",
                         column: x => x.MilestoneId,
-                        principalTable: "Milestone",
+                        principalTable: "Milestones",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_MilestoneTasks_ProjectTask_ProjectTaskId",
+                        name: "FK_MilestoneTasks_ProjectTasks_ProjectTaskId",
                         column: x => x.ProjectTaskId,
-                        principalTable: "ProjectTask",
+                        principalTable: "ProjectTasks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "7149faee-1681-4b98-be71-1c4b7a27e80d", "AQAAAAIAAYagAAAAEFw7L449o6jE9rfeVDVj6kvoMm/FcxtrJUjy8+xGRnga5gf1LdMJobSE2H0QfUEauA==" });
+            migrationBuilder.InsertData(
+                table: "AspNetRoles",
+                columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+                values: new object[,]
+                {
+                    { new Guid("a1b2c3d4-e5f6-4789-1234-56789abcdef0"), null, "Admin", "ADMIN" },
+                    { new Guid("b1c2d3e4-f5a6-4789-1234-56789abcdef1"), null, "Member", "MEMBER" },
+                    { new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"), null, "ProjectManager", "PROJECTMANAGER" },
+                    { new Guid("d1e2f3a4-b5c6-4789-1234-56789abcdef3"), null, "BusinessOwner", "BUSINESSOWNER" }
+                });
 
-            migrationBuilder.UpdateData(
+            migrationBuilder.InsertData(
                 table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "6a121d17-0108-49c0-8709-3c9446634144", "AQAAAAIAAYagAAAAEMHawpxbEvW17fAFqXj4cMdom0rQgkQNROxLQhdmOp+K98wL+aTchj1TMRLpqAFm2g==" });
+                columns: new[] { "Id", "AccessFailedCount", "AvatarUrl", "BusinessLicense", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "FullName", "GoogleId", "IsActive", "IsApproved", "LockoutEnabled", "LockoutEnd", "ManagedById", "NormalizedEmail", "NormalizedUserName", "Organization", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "Provider", "RefreshToken", "RefreshTokenExpiresAtUtc", "SecurityStamp", "TwoFactorEnabled", "UserName" },
+                values: new object[,]
+                {
+                    { new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "6eb81eb8-a4ab-4ffd-a979-5369495acc3a", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "admin@gmail.com", true, "Admin-Nguyễn Văn An", null, true, false, false, null, null, "ADMIN@GMAIL.COM", "ADMIN", null, "AQAAAAIAAYagAAAAEPeM1+LUlSP+EWEank2y4WKT1O8Cqy6J33kUozLEvVW29wNLsz7ZmsaW2y9UqwnP2g==", null, false, null, null, null, "3e2ebe62-3d43-4a2b-9060-72f56f03d9a6", false, "admin" },
+                    { new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "7910f51a-b1f4-48d6-905e-de68f1bbcbc1", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "member@gmail.com", true, "Member-Lê Thị Thúy", null, true, false, false, null, null, "MEMBER@GMAIL.COM", "MEMBER", null, "AQAAAAIAAYagAAAAEHb7veoDvzikjRNlmRyp+XKz6Wt7LfmZ8S9RoP/K8rAaoh18MTx5UMyX+d7/ynx/aw==", null, false, null, null, null, "dd7a710c-17ce-4e87-aeb8-70c5fe1e0735", false, "Member" },
+                    { new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "8a198368-4c87-4eed-a836-2e1233510f35", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "manager@gmail.com", true, "ProjectManager-Trần Văn Bình", null, true, false, false, null, null, "MANAGER@GMAIL.COM", "PROJECTMANAGER", null, "AQAAAAIAAYagAAAAEK/7m4m/VtmOHdzI1EBJq0YfnpEhuf9splfNNP4sC9qvWNdbPSzZReGdJQGF7/FmQA==", null, false, null, null, null, "bb1f6b4d-1636-44ae-86d0-98b95345debb", false, "ProjectManager" },
+                    { new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"), 0, null, null, "e57f754d-014b-4b1c-9a58-52e82eb586ba", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "businessowner@gmail.com", true, "BusinessOwner-Ngô Văn Thanh", null, true, true, false, null, null, "BUSINESSOWNER@GMAIL.COM", "BUSINESSOWNER", "FPT Software", "AQAAAAIAAYagAAAAEAllkBk5bjQ0rez8U1DYYep2jJLXwIKfIEmzTrH31FoVebAsuGdEjAxg2gVjfo/JTA==", null, false, null, null, null, "b78b8580-e089-4a6f-848a-72b749686f62", false, "BusinessOwner" }
+                });
 
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "5bc361f1-d36f-4c3b-bd28-3a40d834df7d", "AQAAAAIAAYagAAAAEKO3EHeKD7dpJbfF+oArtF9KDvVYe1cuip7EVyh7ohCe6dZfK0aRFQEd3gV8um8YtA==" });
-
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "db053d07-1074-457f-9c7b-7cb02d415079", "AQAAAAIAAYagAAAAENgpYpMVonrZlS+B7vy4XBjr8BKIuYDL57b5JDtmEuoyzuyhdzqu1kSPT86eBnh2Qw==" });
+            migrationBuilder.InsertData(
+                table: "AspNetUserRoles",
+                columns: new[] { "RoleId", "UserId" },
+                values: new object[,]
+                {
+                    { new Guid("a1b2c3d4-e5f6-4789-1234-56789abcdef0"), new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2") },
+                    { new Guid("b1c2d3e4-f5a6-4789-1234-56789abcdef1"), new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2") },
+                    { new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"), new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2") },
+                    { new Guid("d1e2f3a4-b5c6-4789-1234-56789abcdef3"), new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2") }
+                });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Comment_TaskId",
-                table: "Comment",
-                column: "TaskId");
+                name: "IX_AspNetRoleClaims_RoleId",
+                table: "AspNetRoleClaims",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Comment_UserId",
-                table: "Comment",
+                name: "RoleNameIndex",
+                table: "AspNetRoles",
+                column: "NormalizedName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserClaims_UserId",
+                table: "AspNetUserClaims",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Document_OwnerId",
-                table: "Document",
+                name: "IX_AspNetUserLogins_UserId",
+                table: "AspNetUserLogins",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserRoles_RoleId",
+                table: "AspNetUserRoles",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "EmailIndex",
+                table: "AspNetUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_ManagedById",
+                table: "AspNetUsers",
+                column: "ManagedById");
+
+            migrationBuilder.CreateIndex(
+                name: "UserNameIndex",
+                table: "AspNetUsers",
+                column: "NormalizedUserName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Comments_TaskId",
+                table: "Comments",
+                column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Comments_UserId",
+                table: "Comments",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Documents_OwnerId",
+                table: "Documents",
                 column: "OwnerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Document_ProjectId",
-                table: "Document",
+                name: "IX_Documents_ProjectId",
+                table: "Documents",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Meeting_CreatedById",
-                table: "Meeting",
+                name: "IX_Meetings_CreatedById",
+                table: "Meetings",
                 column: "CreatedById");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Meeting_MilestoneId",
-                table: "Meeting",
+                name: "IX_Meetings_MilestoneId",
+                table: "Meetings",
                 column: "MilestoneId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Meeting_ProjectId",
-                table: "Meeting",
+                name: "IX_Meetings_ProjectId",
+                table: "Meetings",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
@@ -502,13 +743,13 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Milestone_ProjectId",
-                table: "Milestone",
+                name: "IX_Milestones_ProjectId",
+                table: "Milestones",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Milestone_UserId",
-                table: "Milestone",
+                name: "IX_Milestones_UserId",
+                table: "Milestones",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -517,9 +758,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 column: "ProjectTaskId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Package_CreatedById",
-                table: "Package",
-                column: "CreatedById");
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PackageFeatures_FeatureId",
@@ -527,58 +768,63 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 column: "FeatureId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Project_CreatedById",
-                table: "Project",
+                name: "IX_Packages_CreatedById",
+                table: "Packages",
                 column: "CreatedById");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Project_OwnerId",
-                table: "Project",
-                column: "OwnerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProjectMember_MemberId",
-                table: "ProjectMember",
+                name: "IX_ProjectMembers_MemberId",
+                table: "ProjectMembers",
                 column: "MemberId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProjectMember_ProjectId",
-                table: "ProjectMember",
+                name: "IX_ProjectMembers_ProjectId",
+                table: "ProjectMembers",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProjectTask_ProjectId",
-                table: "ProjectTask",
+                name: "IX_Projects_CreatedById",
+                table: "Projects",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Projects_OwnerId",
+                table: "Projects",
+                column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectTasks_ProjectId",
+                table: "ProjectTasks",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProjectTask_TodoId",
-                table: "ProjectTask",
+                name: "IX_ProjectTasks_TodoId",
+                table: "ProjectTasks",
                 column: "TodoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProjectTask_UserId",
-                table: "ProjectTask",
+                name: "IX_ProjectTasks_UserId",
+                table: "ProjectTasks",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Subscription_PackageId",
-                table: "Subscription",
+                name: "IX_Subscriptions_PackageId",
+                table: "Subscriptions",
                 column: "PackageId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Subscription_UserId",
-                table: "Subscription",
+                name: "IX_Subscriptions_UserId",
+                table: "Subscriptions",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Todo_MeetingId",
-                table: "Todo",
+                name: "IX_Todos_MeetingId",
+                table: "Todos",
                 column: "MeetingId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Todo_UserId",
-                table: "Todo",
+                name: "IX_Todos_UserId",
+                table: "Todos",
                 column: "UserId");
         }
 
@@ -586,10 +832,25 @@ namespace MSP.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Comment");
+                name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
-                name: "Document");
+                name: "AspNetUserClaims");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserLogins");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserRoles");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserTokens");
+
+            migrationBuilder.DropTable(
+                name: "Comments");
+
+            migrationBuilder.DropTable(
+                name: "Documents");
 
             migrationBuilder.DropTable(
                 name: "MeetingUsers");
@@ -598,62 +859,43 @@ namespace MSP.Infrastructure.Persistence.Migrations
                 name: "MilestoneTasks");
 
             migrationBuilder.DropTable(
+                name: "Notifications");
+
+            migrationBuilder.DropTable(
                 name: "PackageFeatures");
 
             migrationBuilder.DropTable(
-                name: "ProjectMember");
+                name: "ProjectMembers");
 
             migrationBuilder.DropTable(
-                name: "Subscription");
+                name: "Subscriptions");
 
             migrationBuilder.DropTable(
-                name: "ProjectTask");
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Feature");
+                name: "ProjectTasks");
 
             migrationBuilder.DropTable(
-                name: "Package");
+                name: "Features");
 
             migrationBuilder.DropTable(
-                name: "Todo");
+                name: "Packages");
 
             migrationBuilder.DropTable(
-                name: "Meeting");
+                name: "Todos");
 
             migrationBuilder.DropTable(
-                name: "Milestone");
+                name: "Meetings");
 
             migrationBuilder.DropTable(
-                name: "Project");
+                name: "Milestones");
 
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "b87e469f-332d-4b82-93c5-20ff3aedcdc4", "AQAAAAIAAYagAAAAECwXZjLIakoY+Mjzq458Oa1tOwJuzy/v7iR6RkJH+2rLv2NgZrhSXLtarECY3umJ/g==" });
+            migrationBuilder.DropTable(
+                name: "Projects");
 
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "4ceaa328-827c-4aba-9dbf-7ce4fb0f4375", "AQAAAAIAAYagAAAAEBKTMIeuN1+GF+gcTVBlfnSbRE8t599SJFEq3uayQ3iLgtZ6Mqp+JEDYtfxB0HY5pA==" });
-
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "52005655-22c4-417a-9e17-1c69ac150a7c", "AQAAAAIAAYagAAAAEJKRdzvlut1jBqPDH+Odtoo1FTisDuMQzpsCVnbp8Vde+mtVBphCJ5buz4s+NK3ALA==" });
-
-            migrationBuilder.UpdateData(
-                table: "AspNetUsers",
-                keyColumn: "Id",
-                keyValue: new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"),
-                columns: new[] { "ConcurrencyStamp", "PasswordHash" },
-                values: new object[] { "0b2e9e8d-d78e-4922-92aa-be031aaa11aa", "AQAAAAIAAYagAAAAEGwb91Gs/S0ZRYNfrCGuKpelWpSD7D/KNkEMCunX5AtUNzhwwHZARSqXGRAJASUuUg==" });
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }

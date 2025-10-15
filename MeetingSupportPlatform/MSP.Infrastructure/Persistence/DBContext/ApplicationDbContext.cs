@@ -36,6 +36,7 @@ namespace MSP.Infrastructure.Persistence.DBContext
 
             builder.ApplyConfiguration(new RoleConfiguration());
             builder.ApplyConfiguration(new UserConfiguration());
+            builder.ApplyConfiguration(new UserRoleConfiguration());
             builder.Entity<User>()
                 .Property(u => u.FullName)
                 .HasMaxLength(256);
