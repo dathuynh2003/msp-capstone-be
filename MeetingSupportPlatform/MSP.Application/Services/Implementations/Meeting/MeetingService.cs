@@ -34,6 +34,9 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (project == null)
                 return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Project not found");
 
+            // Lấy danh sách attendees
+            var attendees = await _meetingRepository.GetAttendeesAsync(request.AttendeeIds);
+
             var meeting = new Domain.Entities.Meeting
             {
                 Id = request.MeetingId,
@@ -46,27 +49,17 @@ namespace MSP.Application.Services.Implementations.Meeting
                 EndTime = request.StartTime.AddHours(1),
                 Status = MSP.Shared.Enums.MeetingEnum.Scheduled.ToString(),
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                Attendees = attendees.ToList()
             };
 
             await _meetingRepository.AddAsync(meeting);
             await _meetingRepository.SaveChangesAsync();
 
-            var response = new GetMeetingResponse
-            {
-                Id = meeting.Id,
-                ProjectId = meeting.ProjectId,
-                CreatedById = meeting.CreatedById,
-                MilestoneId = meeting.MilestoneId,
-                Title = meeting.Title,
-                Description = meeting.Description ?? string.Empty,
-                StartTime = meeting.StartTime,
-                EndTime = meeting.EndTime,
-                Status = meeting.Status,
-                CreatedAt = meeting.CreatedAt,
-                UpdatedAt = meeting.UpdatedAt
-            };
+            // Lấy lại meeting với đầy đủ thông tin
+            var createdMeeting = await _meetingRepository.GetMeetingByIdAsync(meeting.Id);
 
+            var response = MapToMeetingResponse(createdMeeting);
             return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting created successfully");
         }
 
@@ -88,41 +81,14 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (meeting == null)
                 return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Meeting not found");
 
-            var response = new GetMeetingResponse
-            {
-                Id = meeting.Id,
-                ProjectId = meeting.ProjectId,
-                MilestoneId = meeting.MilestoneId,
-                CreatedById = meeting.CreatedById,
-                Title = meeting.Title,
-                Description = meeting.Description ?? string.Empty,
-                StartTime = meeting.StartTime,
-                EndTime = meeting.EndTime,
-                Status = meeting.Status,
-                CreatedAt = meeting.CreatedAt,
-                UpdatedAt = meeting.UpdatedAt
-            };
-
+            var response = MapToMeetingResponse(meeting);
             return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting retrieved successfully");
         }
 
         public async Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByProjectIdAsync(Guid projectId)
         {
             var meetings = await _meetingRepository.GetMeetingByProjectIdAsync(projectId);
-            var response = meetings.Select(meeting => new GetMeetingResponse
-            {
-                Id = meeting.Id,
-                ProjectId = meeting.ProjectId,
-                CreatedById = meeting.CreatedById,
-                MilestoneId = meeting.MilestoneId,
-                Title = meeting.Title,
-                Description = meeting.Description ?? string.Empty,
-                StartTime = meeting.StartTime,
-                EndTime = meeting.EndTime,
-                Status = meeting.Status,
-                CreatedAt = meeting.CreatedAt,
-                UpdatedAt = meeting.UpdatedAt
-            }).ToList();
+            var response = meetings.Select(meeting => MapToMeetingResponse(meeting)).ToList();
 
             return ApiResponse<List<GetMeetingResponse>>.SuccessResponse(response, "Meetings retrieved successfully");
         }
@@ -152,33 +118,56 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (project == null)
                 return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Project not found");
 
+            // Lấy danh sách attendees mới
+            var attendees = await _meetingRepository.GetAttendeesAsync(request.AttendeeIds);
+
             // Cập nhật thông tin meeting
             meeting.Title = request.Title;
             meeting.Description = request.Description;
             meeting.MilestoneId = request.MilestoneId;
             meeting.StartTime = request.StartTime;
             meeting.UpdatedAt = DateTime.UtcNow;
-
             meeting.EndTime = request.StartTime.AddHours(1);
+
+            // Cập nhật attendees - clear existing và add new
+            meeting.Attendees.Clear();
+            foreach (var attendee in attendees)
+            {
+                meeting.Attendees.Add(attendee);
+            }
 
             await _meetingRepository.UpdateAsync(meeting);
             await _meetingRepository.SaveChangesAsync();
 
-            var response = new GetMeetingResponse
+            // Lấy lại meeting với đầy đủ thông tin
+            var updatedMeeting = await _meetingRepository.GetMeetingByIdAsync(meeting.Id);
+            var response = MapToMeetingResponse(updatedMeeting);
+
+            return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting updated successfully");
+        }
+
+        private GetMeetingResponse MapToMeetingResponse(Domain.Entities.Meeting meeting)
+        {
+            return new GetMeetingResponse
             {
                 Id = meeting.Id,
                 ProjectId = meeting.ProjectId,
                 CreatedById = meeting.CreatedById,
+                MilestoneId = meeting.MilestoneId,
                 Title = meeting.Title,
                 Description = meeting.Description ?? string.Empty,
                 StartTime = meeting.StartTime,
                 EndTime = meeting.EndTime,
                 Status = meeting.Status,
                 CreatedAt = meeting.CreatedAt,
-                UpdatedAt = meeting.UpdatedAt
+                UpdatedAt = meeting.UpdatedAt,
+                Attendees = meeting.Attendees?.Select(a => new AttendeeResponse
+                {
+                    Id = a.Id,
+                    Email = a.Email,
+                    AvatarUrl = a.AvatarUrl
+                }).ToList() ?? new List<AttendeeResponse>()
             };
-
-            return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting updated successfully");
         }
     }
 }

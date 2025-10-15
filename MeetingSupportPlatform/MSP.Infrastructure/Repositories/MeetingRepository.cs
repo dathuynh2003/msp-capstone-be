@@ -25,6 +25,8 @@ namespace MSP.Infrastructure.Repositories
             return await _context.Meetings
                 .Include(m => m.Attendees)
                 .Include(m => m.CreatedBy)
+                .Include(m => m.Project)
+                .Include(m => m.Milestone)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
@@ -33,6 +35,8 @@ namespace MSP.Infrastructure.Repositories
             return await _context.Meetings
                 .Include(m => m.Attendees)
                 .Include(m => m.CreatedBy)
+                .Include(m => m.Project)
+                .Include(m => m.Milestone)
                 .Where(m => m.ProjectId == projectId)
                 .OrderByDescending(m => m.StartTime)
                 .ToListAsync();
