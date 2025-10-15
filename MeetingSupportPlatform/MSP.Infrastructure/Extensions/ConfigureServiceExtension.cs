@@ -27,7 +27,7 @@ namespace MSP.Infrastructure.Extensions
             services.AddScoped<IProjectMemberRepository, ProjectMemberRepository>();
             services.AddScoped<IMilestoneRepository, MilestoneRepository>();
             services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
-
+            services.AddScoped<IMeetingRepository, MeetingRepository>();
             // Register Services
             services.AddScoped<IEmailSender, EmailSender>();
 

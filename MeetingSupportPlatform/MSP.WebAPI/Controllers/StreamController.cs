@@ -1,6 +1,7 @@
 ﻿using MSP.Application.Services.Interfaces.Meeting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MSP.Application.Models.Requests.Meeting;
 
 namespace MeetingService.API.Controllers
 {

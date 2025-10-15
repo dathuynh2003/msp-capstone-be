@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace MSP.Application.Models
+namespace MSP.Application.Models.Responses.Meeting
 {
-    public class TranscriptionItem
+    public class TranscriptionLine
     {
         [JsonProperty("speaker_id")]
         public string SpeakerId { get; set; } = string.Empty;

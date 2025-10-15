@@ -30,6 +30,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<IMilestoneService, MilestoneService>();
             services.AddScoped<IProjectTaskService, ProjectTaskService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IMeetingService, MeetingService>();
 
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(

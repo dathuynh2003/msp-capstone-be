@@ -8,14 +8,14 @@ using System.IO;
 using System.Threading.Tasks;
 using Whisper.net;
 using Whisper.net.Ggml;
-using MSP.Application.Models;
 using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Models.Responses.Meeting;
 
 namespace MSP.Application.Services.Implementations.Meeting
 {
     public class WhisperService : IWhisperService
     {
-        public async Task<List<TranscriptionItem>> TranscribeVideoAsync(string videoPath)
+        public async Task<List<TranscriptionLine>> TranscribeVideoAsync(string videoPath)
         {
             if (!File.Exists(videoPath))
                 throw new FileNotFoundException(videoPath);
@@ -46,7 +46,7 @@ namespace MSP.Application.Services.Implementations.Meeting
             var totalDuration = waveReader.TotalTime;
             var numOfSegments = (int)Math.Ceiling(totalDuration.TotalSeconds / segmentDuration.TotalSeconds);
 
-            var results = new List<TranscriptionItem>();
+            var results = new List<TranscriptionLine>();
 
             for (int i = 0; i < numOfSegments; i++)
             {
@@ -69,7 +69,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                 {
                     var offset = TimeSpan.FromSeconds(durationOffsetSeconds);
 
-                    results.Add(new TranscriptionItem
+                    results.Add(new TranscriptionLine
                     {
                         Text = item.Text ?? string.Empty,
                         StartTs = (int)(item.Start + offset).TotalMilliseconds,

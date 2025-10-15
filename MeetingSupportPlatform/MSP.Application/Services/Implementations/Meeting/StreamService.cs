@@ -1,5 +1,4 @@
-﻿using MSP.Application.Models;
-using MSP.Application.Services.Interfaces.Meeting;
+﻿using MSP.Application.Services.Interfaces.Meeting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -7,6 +6,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using MSP.Application.Models.Responses.Meeting;
+using MSP.Application.Models.Requests.Meeting;
 
 public class StreamSettings
 {
@@ -15,21 +16,6 @@ public class StreamSettings
     public string BaseUrl { get; set; } = string.Empty;
     public string ActionUrl { get; set; } = string.Empty;
 
-}
-
-public class StreamUserRequest
-{
-    [JsonProperty("id")]
-    public string Id { get; set; } = string.Empty;
-
-    [JsonProperty("role")]
-    public string Role { get; set; } = "user";
-
-    [JsonProperty("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonProperty("image")]
-    public string? Image { get; set; }
 }
 
 public class StreamService : IStreamService
@@ -116,7 +102,7 @@ public class StreamService : IStreamService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<List<TranscriptionItem>> ListTranscriptionsAsync(string type, string id)
+    public async Task<List<TranscriptionLine>> ListTranscriptionsAsync(string type, string id)
     {
         var url = $"{_settings.ActionUrl}/video/call/{type}/{id}/transcriptions?api_key={_settings.ApiKey}";
         var token = GenerateServerToken();
@@ -142,14 +128,14 @@ public class StreamService : IStreamService
             // Parse JSONL thành List<TranscriptionItem>
             var lines = transcriptContent
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => JsonConvert.DeserializeObject<TranscriptionItem>(x))
+                .Select(x => JsonConvert.DeserializeObject<TranscriptionLine>(x))
                 .Where(x => x != null)
                 .ToList()!;
 
             return lines;
         }
 
-        return new List<TranscriptionItem>();
+        return new List<TranscriptionLine>();
     }
 
 
