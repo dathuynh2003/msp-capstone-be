@@ -268,7 +268,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
             }
 
-            var user = await _userManager.FindByIdAsync(request.ProjectId.ToString());
+            var user = await _userManager.FindByIdAsync(request.UserId.ToString());
             if (user == null)
             {
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");

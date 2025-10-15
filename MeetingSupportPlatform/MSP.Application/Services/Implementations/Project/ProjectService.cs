@@ -75,6 +75,17 @@ namespace MSP.Application.Services.Implementations.Project
             };
 
             _ = await _projectRepository.AddAsync(project);
+            await _projectRepository.SaveChangesAsync();
+
+            var projectMember = new ProjectMember
+            {
+                ProjectId = project.Id,
+                MemberId = request.CreatedById,
+                JoinedAt = DateTime.UtcNow
+            };
+
+            await _projectMemberRepository.AddAsync(projectMember);
+            await _projectMemberRepository.SaveChangesAsync();
 
             var response = new GetProjectResponse
             {
@@ -89,7 +100,6 @@ namespace MSP.Application.Services.Implementations.Project
                 Status = project.Status
             };
 
-            await _projectRepository.SaveChangesAsync();
             return ApiResponse<GetProjectResponse>.SuccessResponse(response);
         }
 
