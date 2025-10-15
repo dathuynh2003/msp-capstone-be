@@ -1,4 +1,5 @@
-﻿using MSP.Application.Models.Responses.Users;
+﻿using MSP.Application.Models.Requests.User;
+using MSP.Application.Models.Responses.Users;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
@@ -13,6 +14,7 @@ namespace MSP.Application.Services.Interfaces.Users
         Task<ApiResponse<string>> RejectBusinessOwnerAsync(Guid userId);
         Task<ApiResponse<string>> ToggleUserActiveStatusAsync(Guid userId);
         Task<ApiResponse<IEnumerable<GetUserResponse>>> GetMembersManagedByAsync(Guid businessOwnerId);
+        Task<ApiResponse<ReAssignRoleResponse>> ReAssignRoleAsync(ReAssignRoleRequest request);
 
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MSP.Application.Abstracts;
 using MSP.Application.Models.Requests.Notification;
+using MSP.Application.Models.Requests.User;
 using MSP.Application.Models.Responses.Users;
 using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.Users;
@@ -210,6 +211,51 @@ namespace MSP.Application.Services.Implementations.Users
             });
             return ApiResponse<IEnumerable<GetUserResponse>>.SuccessResponse(await Task.WhenAll(results), "Members retrieved successfully.");
         }
+
+        public async Task<ApiResponse<ReAssignRoleResponse>> ReAssignRoleAsync(ReAssignRoleRequest request)
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+            if (user == null)
+            {
+                return ApiResponse<ReAssignRoleResponse>.ErrorResponse(null, "User not found.");
+            }
+
+            if (user.ManagedById == null || user.ManagedById != request.BusinessOwnerId)
+            {
+                return ApiResponse<ReAssignRoleResponse>.ErrorResponse(null, "You do not have permission to change this user's role.");
+            }
+
+            var newRole = request.NewRole;
+
+            // Chỉ cho phép ProjectManager và Member
+            var allowedRoles = new[] {
+                UserRoleEnum.ProjectManager.ToString(),
+                UserRoleEnum.Member.ToString()
+            };
+
+            if (!allowedRoles.Contains(newRole))
+            {
+                return ApiResponse<ReAssignRoleResponse>.ErrorResponse(null, "Invalid role specified. Only ProjectManager and Member roles are allowed.");
+            }
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            if (!removeResult.Succeeded)
+            {
+                return ApiResponse<ReAssignRoleResponse>.ErrorResponse(null, "Failed to remove user from current roles.");
+            }
+            var addResult = await _userManager.AddToRoleAsync(user, newRole);
+            if (!addResult.Succeeded)
+            {
+                return ApiResponse<ReAssignRoleResponse>.ErrorResponse(null, "Failed to assign new role to user.");
+            }
+            var response = new ReAssignRoleResponse
+            {
+                UserId = user.Id,
+                NewRole = newRole
+            };
+            return ApiResponse<ReAssignRoleResponse>.SuccessResponse(response, "User role reassigned successfully.");
+        }
+
     }
 }
 
