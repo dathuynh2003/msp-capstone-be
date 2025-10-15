@@ -194,21 +194,27 @@ namespace MSP.Application.Services.Implementations.Users
         {
             var businessOwner = await _userManager.FindByIdAsync(businessOwnerId.ToString());
             var members = await _userRepository.GetMembersManagedByAsync(businessOwnerId);
-            var results = members.Select(async user => new GetUserResponse
+            var result = new List<GetUserResponse>();
+            foreach (var user in members)
             {
-                Id = user.Id,
-                Email = user.Email,
-                FullName = user.FullName,
-                AvatarUrl = user.AvatarUrl,
-                PhoneNumber = user.PhoneNumber,
-                Organization = user.Organization,
-                ManagedBy = businessOwnerId,
-                ManagerName = businessOwner?.FullName,
-                IsActive = user.IsActive,
-                CreatedAt = user.CreatedAt,
-                RoleName = (await _userManager.GetRolesAsync(user)).ToArray().FirstOrDefault() ?? "Member"
-            });
-            return ApiResponse<IEnumerable<GetUserResponse>>.SuccessResponse(await Task.WhenAll(results), "Members retrieved successfully.");
+                var role = (await _userManager.GetRolesAsync(user)).FirstOrDefault() ?? "Member";
+                result.Add(new GetUserResponse
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    AvatarUrl = user.AvatarUrl,
+                    PhoneNumber = user.PhoneNumber,
+                    Organization = user.Organization,
+                    ManagedBy = businessOwnerId,
+                    ManagerName = businessOwner?.FullName,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    RoleName = role
+                });
+            }
+            return ApiResponse<IEnumerable<GetUserResponse>>.SuccessResponse(result, "Members retrieved successfully.");
+
         }
     }
 }

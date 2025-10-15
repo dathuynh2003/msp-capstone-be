@@ -62,6 +62,9 @@ namespace MSP.Application.Services.Implementations.Project
             if (user == null)
                 return ApiResponse<GetProjectResponse>.ErrorResponse(null, "User not found");
 
+            if (!user.ManagedById.HasValue)
+                return ApiResponse<GetProjectResponse>.ErrorResponse(null, "User does not have a Business Owner assigned");
+
             var project = new Domain.Entities.Project
             {
                 Name = request.Name,
