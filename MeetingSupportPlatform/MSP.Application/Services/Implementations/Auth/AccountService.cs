@@ -206,7 +206,7 @@ namespace MSP.Application.Services.Implementations.Auth
             user.RefreshTokenExpiresAtUtc = refreshTokenExpiry;
             await _userManager.UpdateAsync(user);
             _authTokenProcessor.WriteAuthTokenAsHttpOnlyCookie("ACCESS_TOKEN", jwtToken, expiresAtUtc);
-            _authTokenProcessor.WriteAuthTokenAsHttpOnlyCookie("REFRESH_TOKEN", refreshToken, refreshTokenExpiry);
+            _authTokenProcessor.WriteAuthTokenAsHttpOnlyCookie("REFRESH_TOKEN", newRefreshToken, refreshTokenExpiry);
             var rs = new RefreshTokenResponse
             {
                 AccessToken = jwtToken,
