@@ -179,6 +179,9 @@ namespace MSP.Application.Services.Implementations.Meeting
                 Status = meeting.Status,
                 CreatedAt = meeting.CreatedAt,
                 UpdatedAt = meeting.UpdatedAt,
+                RecordUrl = meeting.RecordUrl,
+                Transcription = meeting.Transcription,
+                Summary = meeting.Summary,
                 Attendees = meeting.Attendees?.Select(a => new AttendeeResponse
                 {
                     Id = a.Id,

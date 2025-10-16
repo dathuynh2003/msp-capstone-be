@@ -28,8 +28,10 @@ namespace MSP.Application.Models.Responses.Meeting
 
             public DateTime CreatedAt { get; set; }
             public DateTime UpdatedAt { get; set; }
-
-            public List<AttendeeResponse> Attendees { get; set; } = new();
+            public string? RecordUrl { get; set; } 
+            public string? Transcription { get; set; }
+            public string? Summary { get; set; }
+        public List<AttendeeResponse> Attendees { get; set; } = new();
         }
 
         public class AttendeeResponse
