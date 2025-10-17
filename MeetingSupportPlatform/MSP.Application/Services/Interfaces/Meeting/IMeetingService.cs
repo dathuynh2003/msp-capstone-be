@@ -19,5 +19,8 @@ namespace MSP.Application.Services.Interfaces.Meeting
         Task<ApiResponse<string>> CancelMeetingAsync(Guid meetingId);
         Task<ApiResponse<GetMeetingResponse>> GetMeetingByIdAsync(Guid meetingId);
         Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByProjectIdAsync(Guid projectId);
+        Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime);
+
+
     }
 }

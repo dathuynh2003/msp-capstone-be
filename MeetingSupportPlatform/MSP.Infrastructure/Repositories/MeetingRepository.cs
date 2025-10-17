@@ -47,7 +47,7 @@ namespace MSP.Infrastructure.Repositories
             var meeting = await _context.Meetings.FindAsync(id);
             if (meeting == null) return false;
 
-            meeting.Status = MSP.Shared.Enums.MeetingEnum.Cancel.ToString();
+            meeting.Status = MSP.Shared.Enums.MeetingEnum.Cancelled.ToString();
             meeting.UpdatedAt = DateTime.UtcNow;
 
             _context.Meetings.Update(meeting);
