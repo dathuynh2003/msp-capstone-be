@@ -49,6 +49,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                     if (!meeting.EndTime.HasValue && meeting.StartTime.AddHours(1) <= now && meeting.Status == MeetingEnum.Ongoing.ToString())
                     {
                         meeting.Status = MeetingEnum.Finished.ToString();
+                        meeting.EndTime = now;
                         meeting.UpdatedAt = now;
                         meetingRepository.UpdateAsync(meeting).Wait();
                     }
