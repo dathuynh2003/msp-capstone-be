@@ -10,5 +10,7 @@ namespace MSP.Application.Abstracts
         Task<IEnumerable<User>> GetBusinessOwnersAsync();
         Task<IEnumerable<User>> GetPendingBusinessOwnersAsync();
         Task<IEnumerable<User>> GetMembersManagedByAsync(Guid businessOwnerId);
+        Task<int> CountProjectsOwnedByBO(Guid id);
+        Task<int> CountManagedMembersByBO(Guid id);
     }
 }

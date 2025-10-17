@@ -47,5 +47,18 @@ namespace AuthService.Infrastructure.Repositories
                 .Where(u => u.ManagedBy.Id == businessOwnerId).ToListAsync();
             return members;
         }
+
+        public async Task<int> CountProjectsOwnedByBO(Guid id)
+        {
+            var count = await _context.Projects.CountAsync(p => p.OwnerId == id);
+            return count;
+
+        }
+
+        public async Task<int> CountManagedMembersByBO(Guid id)
+        {
+            var count = await _context.Users.CountAsync(u => u.ManagedBy.Id == id);
+            return count;
+        }
     }
 }

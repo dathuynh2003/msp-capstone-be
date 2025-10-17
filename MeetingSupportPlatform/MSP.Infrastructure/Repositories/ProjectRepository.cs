@@ -56,5 +56,12 @@ namespace MSP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
         }
 
+        public async Task<List<Guid>> GetProjectIdsByOwnerIdAsync(Guid ownerId)
+        {
+            return await _context.Projects
+                .Where(p => p.OwnerId == ownerId)
+                .Select(p => p.Id)
+                .ToListAsync();
+        }
     }
 }

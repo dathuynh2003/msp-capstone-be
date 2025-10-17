@@ -78,6 +78,18 @@ namespace MSP.WebAPI.Controllers
             return Ok(response);
         }
 
+        [HttpPatch("{meetingId}/finish")]
+        public async Task<IActionResult> FinishMeeting([FromRoute] Guid meetingId, [FromBody] DateTime endTime)
+        {
+            var response = await _meetingService.FinishMeetingAsync(meetingId, endTime);
+            if (!response.Success)
+            {
+                _logger.LogError("FinishMeeting failed: {Message}", response.Message);
+                return BadRequest(response);
+            }
+            return Ok(response);
+        }
+
         [HttpDelete("{meetingId}")]
         public async Task<IActionResult> DeleteMeeting([FromRoute] Guid meetingId)
         {

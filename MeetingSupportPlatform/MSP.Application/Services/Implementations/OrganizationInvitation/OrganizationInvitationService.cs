@@ -1,0 +1,583 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using MSP.Application.Models.Responses.OrganizationInvitation;
+using MSP.Application.Repositories;
+using MSP.Application.Services.Interfaces.OrganizationInvitation;
+using MSP.Domain.Entities;
+using MSP.Shared.Common;
+using MSP.Shared.Enums;
+
+namespace MSP.Application.Services.Implementations.OrganizationInvitation
+{
+    public class OrganizationInvitationService : IOrganizationInvitationService
+    {
+        private readonly IOrganizationInviteRepository _organizationInviteRepository;
+        private readonly IProjectMemberRepository _projectMemberRepository;
+        private readonly UserManager<User> _userManager;
+        public OrganizationInvitationService(IOrganizationInviteRepository organizationInviteRepository, UserManager<User> userManager, IProjectMemberRepository projectMemberRepository)
+        {
+            _organizationInviteRepository = organizationInviteRepository;
+            _userManager = userManager;
+            _projectMemberRepository = projectMemberRepository;
+        }
+
+        public async Task<ApiResponse<string>> BusinessOwnerAcceptRequestAsync(Guid businessOwnerId, Guid invitationId)
+        {
+            try
+            {
+                // 1. Lấy request
+                var request = await _organizationInviteRepository.GetByIdAsync(invitationId);
+                if (request == null)
+                {
+                    return ApiResponse<string>.ErrorResponse("Request not found.");
+                }
+
+                // 2. Validate: Đúng BO không?
+                if (request.BusinessOwnerId != businessOwnerId)
+                {
+                    return ApiResponse<string>.ErrorResponse("You are not authorized to accept this request.");
+                }
+
+                // 3. Validate: Phải là Request và Pending
+                if (request.Type != InvitationType.Request)
+                {
+                    return ApiResponse<string>.ErrorResponse("This is not a join request.");
+                }
+                if (request.Status != InvitationStatus.Pending)
+                {
+                    return ApiResponse<string>.ErrorResponse($"This request is already {request.Status}.");
+                }
+
+                // 4. Lấy member và business owner
+                var member = request.Member;
+                var businessOwner = await _userManager.FindByIdAsync(businessOwnerId.ToString());
+                if (member == null || businessOwner == null)
+                {
+                    return ApiResponse<string>.ErrorResponse("User not found.");
+                }
+
+                // 5. Cập nhật Member: Organization và ManagedBy
+                member.Organization = businessOwner.Organization;
+                member.ManagedById = businessOwner.Id;
+                var updateResult = await _userManager.UpdateAsync(member);
+                if (!updateResult.Succeeded)
+                {
+                    return ApiResponse<string>.ErrorResponse("Failed to update member information.");
+                }
+
+                // 6. Cập nhật request hiện tại thành Accepted
+                request.Status = InvitationStatus.Accepted;
+                request.RespondedAt = DateTime.UtcNow;
+                await _organizationInviteRepository.UpdateAsync(request);
+
+                // 7. Cancel tất cả invitations/requests pending khác của member
+                var pendingInvitations = await _organizationInviteRepository.GetAllPendingInvitationsByMemberIdAsync(member.Id);
+                var otherPendingInvitations = pendingInvitations.Where(x => x.Id != invitationId).ToList();
+
+                if (otherPendingInvitations.Any())
+                {
+                    foreach (var inv in otherPendingInvitations)
+                    {
+                        inv.Status = InvitationStatus.Canceled;
+                        inv.RespondedAt = DateTime.UtcNow;
+                    }
+                    await _organizationInviteRepository.UpdateRangeAsync(otherPendingInvitations);
+                }
+
+                return ApiResponse<string>.SuccessResponse(
+                    $"{member.FullName} has been added to your organization. {otherPendingInvitations.Count} other pending invitation(s) have been canceled.",
+                    "Request accepted successfully.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.ErrorResponse($"Error accepting request: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> BusinessOwnerRejectRequestAsync(Guid businessOwnerId, Guid invitationId)
+        {
+            try
+            {
+                // 1. Lấy request
+                var request = await _organizationInviteRepository.GetByIdAsync(invitationId);
+                if (request == null)
+                    return ApiResponse<string>.ErrorResponse("Request not found.");
+
+                // 2. Kiểm tra đúng BO và là Request
+                if (request.BusinessOwnerId != businessOwnerId)
+                    return ApiResponse<string>.ErrorResponse("You are not authorized to reject this request.");
+                if (request.Type != InvitationType.Request)
+                    return ApiResponse<string>.ErrorResponse("This is not a join request.");
+
+                if (request.Status != InvitationStatus.Pending)
+                    return ApiResponse<string>.ErrorResponse($"This request is already {request.Status}.");
+
+                // 3. Đánh dấu reject
+                request.Status = InvitationStatus.Rejected;
+                request.RespondedAt = DateTime.UtcNow;
+                await _organizationInviteRepository.UpdateAsync(request);
+
+                // (Optional) Gửi notification cho member (Chưa handle)
+
+                return ApiResponse<string>.SuccessResponse(
+                    "Join request has been rejected.",
+                    "Request rejected successfully."
+                );
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.ErrorResponse($"Error rejecting request: {ex.Message}");
+            }
+        }
+
+        // BO xem requests cần duyệt từ members
+        public async Task<ApiResponse<IEnumerable<OrganizationInvitationResponse>>> GetPendingRequestsByBusinessOwnerIdAsync(Guid businessOwnerId)
+        {
+            try
+            {
+                var requests = await _organizationInviteRepository.GetPendingRequestsByBusinessOwnerIdAsync(businessOwnerId);
+
+                var response = requests.Select(x => new OrganizationInvitationResponse
+                {
+                    Id = x.Id,
+                    BusinessOwnerId = x.BusinessOwnerId,
+                    BusinessOwnerName = x.BusinessOwner?.FullName,
+                    BusinessOwnerEmail = x.BusinessOwner?.Email,
+                    BusinessOwnerAvatar = x.BusinessOwner?.AvatarUrl,
+                    OrganizationName = x.BusinessOwner?.Organization,
+                    MemberId = x.MemberId,
+                    MemberName = x.Member?.FullName,
+                    MemberEmail = x.Member?.Email,
+                    MemberAvatar = x.Member?.AvatarUrl,
+                    Type = x.Type,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    RespondedAt = x.RespondedAt
+                }).ToList();
+
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.SuccessResponse(
+                    response,
+                    $"Found {response.Count} pending request(s).");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.ErrorResponse(null, $"Error retrieving pending requests: {ex.Message}");
+            }
+        }
+
+        // Member xem invitations đã nhận từ BO
+        public async Task<ApiResponse<IEnumerable<OrganizationInvitationResponse>>> GetReceivedInvitationsByMemberIdAsync(Guid memberId)
+        {
+            try
+            {
+                var invitations = await _organizationInviteRepository.GetReceivedInvitationsByMemberIdAsync(memberId);
+
+                var response = invitations.Select(x => new OrganizationInvitationResponse
+                {
+                    Id = x.Id,
+                    BusinessOwnerId = x.BusinessOwnerId,
+                    BusinessOwnerName = x.BusinessOwner?.FullName,
+                    BusinessOwnerEmail = x.BusinessOwner?.Email,
+                    BusinessOwnerAvatar = x.BusinessOwner?.AvatarUrl,
+                    OrganizationName = x.BusinessOwner?.Organization,
+                    MemberId = x.MemberId,
+                    MemberName = x.Member?.FullName,
+                    MemberEmail = x.Member?.Email,
+                    MemberAvatar = x.Member?.AvatarUrl,
+                    Type = x.Type,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    RespondedAt = x.RespondedAt
+                }).ToList();
+
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.SuccessResponse(
+                    response,
+                    $"Found {response.Count} received invitation(s).");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.ErrorResponse(null, $"Error retrieving received invitations: {ex.Message}");
+            }
+        }
+
+        // BO xem invitations đã gửi cho members
+        public async Task<ApiResponse<IEnumerable<OrganizationInvitationResponse>>> GetSentInvitationsByBusinessOwnerIdAsync(Guid businessOwnerId)
+        {
+            try
+            {
+                var invitations = await _organizationInviteRepository.GetSentInvitationsByBusinessOwnerIdAsync(businessOwnerId);
+
+                var response = invitations.Select(x => new OrganizationInvitationResponse
+                {
+                    Id = x.Id,
+                    BusinessOwnerId = x.BusinessOwnerId,
+                    BusinessOwnerName = x.BusinessOwner?.FullName,
+                    BusinessOwnerEmail = x.BusinessOwner?.Email,
+                    BusinessOwnerAvatar = x.BusinessOwner?.AvatarUrl,
+                    OrganizationName = x.BusinessOwner?.Organization,
+                    MemberId = x.MemberId,
+                    MemberName = x.Member?.FullName,
+                    MemberEmail = x.Member?.Email,
+                    MemberAvatar = x.Member?.AvatarUrl,
+                    Type = x.Type,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    RespondedAt = x.RespondedAt
+                }).ToList();
+
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.SuccessResponse(
+                    response,
+                    $"Found {response.Count} sent invitation(s).");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.ErrorResponse(null, $"Error retrieving sent invitations: {ex.Message}");
+            }
+        }
+
+        // Member xem requests đã gửi đến BO
+        public async Task<ApiResponse<IEnumerable<OrganizationInvitationResponse>>> GetSentRequestsByMemberIdAsync(Guid memberId)
+        {
+            try
+            {
+                var requests = await _organizationInviteRepository.GetSentRequestsByMemberIdAsync(memberId);
+
+                var response = requests.Select(x => new OrganizationInvitationResponse
+                {
+                    Id = x.Id,
+                    BusinessOwnerId = x.BusinessOwnerId,
+                    BusinessOwnerName = x.BusinessOwner?.FullName,
+                    BusinessOwnerEmail = x.BusinessOwner?.Email,
+                    BusinessOwnerAvatar = x.BusinessOwner?.AvatarUrl,
+                    OrganizationName = x.BusinessOwner?.Organization,
+                    MemberId = x.MemberId,
+                    MemberName = x.Member?.FullName,
+                    MemberEmail = x.Member?.Email,
+                    MemberAvatar = x.Member?.AvatarUrl,
+                    Type = x.Type,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    RespondedAt = x.RespondedAt
+                }).ToList();
+
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.SuccessResponse(
+                    response,
+                    $"Found {response.Count} sent request(s).");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.ErrorResponse(null, $"Error retrieving sent requests: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> MemberAcceptInvitationAsync(Guid memberId, Guid invitationId)
+        {
+            try
+            {
+                // 1. Lấy invitation
+                var invitation = await _organizationInviteRepository.GetByIdAsync(invitationId);
+                if (invitation == null)
+                {
+                    return ApiResponse<string>.ErrorResponse("Invitation not found.");
+                }
+
+                // 2. Validate: Đúng member không?
+                if (invitation.MemberId != memberId)
+                {
+                    return ApiResponse<string>.ErrorResponse("You are not authorized to accept this invitation.");
+                }
+
+                // 3. Validate: Phải là Invite và Pending
+                if (invitation.Type != InvitationType.Invite)
+                {
+                    return ApiResponse<string>.ErrorResponse("This is not an invitation.");
+                }
+                if (invitation.Status != InvitationStatus.Pending)
+                {
+                    return ApiResponse<string>.ErrorResponse($"This invitation is already {invitation.Status}.");
+                }
+
+                // 4. Lấy member và business owner
+                var member = await _userManager.FindByIdAsync(memberId.ToString());
+                var businessOwner = invitation.BusinessOwner;
+
+                if (member == null || businessOwner == null)
+                {
+                    return ApiResponse<string>.ErrorResponse("User not found.");
+                }
+
+                // 5. Cập nhật Member: Organization và ManagedBy
+                member.Organization = businessOwner.Organization;
+                member.ManagedById = businessOwner.Id;
+
+                var updateResult = await _userManager.UpdateAsync(member);
+                if (!updateResult.Succeeded)
+                {
+                    return ApiResponse<string>.ErrorResponse("Failed to update member information.");
+                }
+
+                // 6. Cập nhật invitation hiện tại thành Accepted
+                invitation.Status = InvitationStatus.Accepted;
+                invitation.RespondedAt = DateTime.UtcNow;
+                await _organizationInviteRepository.UpdateAsync(invitation);
+
+                // 7. Cancel tất cả invitations/requests pending khác của member
+                var pendingInvitations = await _organizationInviteRepository.GetAllPendingInvitationsByMemberIdAsync(memberId);
+                var otherPendingInvitations = pendingInvitations.Where(x => x.Id != invitationId).ToList();
+
+                if (otherPendingInvitations.Any())
+                {
+                    foreach (var inv in otherPendingInvitations)
+                    {
+                        inv.Status = InvitationStatus.Canceled;
+                        inv.RespondedAt = DateTime.UtcNow;
+                    }
+                    await _organizationInviteRepository.UpdateRangeAsync(otherPendingInvitations);
+                }
+
+                return ApiResponse<string>.SuccessResponse(
+                    $"Successfully joined {businessOwner.Organization}. {otherPendingInvitations.Count} other pending invitation(s) have been canceled.",
+                    "Invitation accepted successfully.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.ErrorResponse($"Error accepting invitation: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> MemberLeaveOrganizationAsync(Guid memberId)
+        {
+            try
+            {
+                var member = await _userManager.FindByIdAsync(memberId.ToString());
+                if (member == null)
+                    return ApiResponse<string>.ErrorResponse("Member not found.");
+
+                if (member.ManagedById == null && string.IsNullOrEmpty(member.Organization))
+                    return ApiResponse<string>.ErrorResponse("You are not a member of any organization.");
+
+                var oldOrganization = member.Organization;
+                member.Organization = null;
+                member.ManagedById = null;
+
+                var updateResult = await _userManager.UpdateAsync(member);
+                if (!updateResult.Succeeded)
+                    return ApiResponse<string>.ErrorResponse("Failed to leave organization.");
+
+                // Sử dụng repository thay vì context
+                var activeMemberships = await _projectMemberRepository.GetActiveMembershipsByMemberIdAsync(memberId);
+                var now = DateTime.UtcNow;
+                foreach (var pm in activeMemberships)
+                {
+                    pm.LeftAt = now;
+                }
+                await _projectMemberRepository.UpdateRangeAsync(activeMemberships);
+                await _projectMemberRepository.SaveChangesAsync();
+
+                return ApiResponse<string>.SuccessResponse(
+                    $"You have successfully left {oldOrganization ?? "the organization"}. Project memberships updated ({activeMemberships.Count}).",
+                    "Left organization successfully.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.ErrorResponse($"Error leaving organization: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> MemberRejectInvitationAsync(Guid memberId, Guid invitationId)
+        {
+            try
+            {
+                // 1. Lấy invitation
+                var invitation = await _organizationInviteRepository.GetByIdAsync(invitationId);
+                if (invitation == null)
+                    return ApiResponse<string>.ErrorResponse("Invitation not found.");
+
+                // 2. Kiểm tra đúng member và là loại Invite đang Pending
+                if (invitation.MemberId != memberId)
+                    return ApiResponse<string>.ErrorResponse("You are not authorized to reject this invitation.");
+                if (invitation.Type != InvitationType.Invite)
+                    return ApiResponse<string>.ErrorResponse("This is not a business invitation.");
+                if (invitation.Status != InvitationStatus.Pending)
+                    return ApiResponse<string>.ErrorResponse($"This invitation is already {invitation.Status}.");
+
+                // 3. Cập nhật status thành Rejected
+                invitation.Status = InvitationStatus.Rejected;
+                invitation.RespondedAt = DateTime.UtcNow;
+                await _organizationInviteRepository.UpdateAsync(invitation);
+
+                return ApiResponse<string>.SuccessResponse(
+                    $"You have rejected the invitation from business.",
+                    "Invitation rejected successfully.");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.ErrorResponse($"Error rejecting invitation: {ex.Message}");
+            }
+        }
+
+
+        public async Task<ApiResponse<bool>> RequestJoinOrganizeAsync(Guid memberId, Guid businessOwnerId)
+        {
+            // Validate member exists
+            var member = await _userManager.FindByIdAsync(memberId.ToString());
+            if (member == null)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "Member not found.");
+            }
+
+            // Check if member already has organization
+            if (!string.IsNullOrEmpty(member.Organization))
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    "You are already part of an organization. Please leave your current organization first.");
+            }
+
+            // Validate business owner exists
+            var businessOwner = await _userManager.FindByIdAsync(businessOwnerId.ToString());
+            if (businessOwner == null)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "Business owner not found.");
+            }
+            //Check businessOwner role
+            var roles = await _userManager.GetRolesAsync(businessOwner);
+            if (!roles.Contains("BusinessOwner"))
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "The specified user is not a business owner.");
+            }
+
+            // Check if invitation already exists
+            var invitationExists = await _organizationInviteRepository.IsInvitationExistsAsync(businessOwnerId, memberId);
+            if (invitationExists)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "An invitation already exists.");
+            }
+            // Create new invitation
+            var invitation = new Domain.Entities.OrganizationInvitation
+            {
+                BusinessOwnerId = businessOwnerId,
+                MemberId = memberId,
+                Status = Shared.Enums.InvitationStatus.Pending,
+                CreatedAt = DateTime.UtcNow,
+                Type = Shared.Enums.InvitationType.Request
+            };
+
+            var rs = await _organizationInviteRepository.AddAsync(invitation);
+            if (!rs)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "Failed to send request to join organization.");
+            }
+            return ApiResponse<bool>.SuccessResponse(true, "Request to join organization sent successfully.");
+        }
+
+        public async Task<ApiResponse<bool>> SendInvitationAsync(Guid businessOwnerId, string memberEmail)
+        {
+            // Validate business owner exists
+            var businessOwner = await _userManager.FindByIdAsync(businessOwnerId.ToString());
+            if (businessOwner == null)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "Business owner not found.");
+            }
+            // Verify businessOwner has BusinessOwner role
+            var roles = await _userManager.GetRolesAsync(businessOwner);
+            if (!roles.Contains(UserRoleEnum.BusinessOwner.ToString()))
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    "You must be a business owner to send invitations.");
+            }
+            // Validate business owner has organization
+            if (string.IsNullOrEmpty(businessOwner.Organization))
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    "You must have an organization to send invitations.");
+            }
+
+            // Find member by email
+            var member = await _userManager.FindByEmailAsync(memberEmail.ToUpper());
+            if (member == null)
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    $"No user found with email: {memberEmail}");
+            }
+            // Verify member has Member role
+            var memberRoles = await _userManager.GetRolesAsync(member);
+            if (!memberRoles.Contains(UserRoleEnum.Member.ToString()))
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    "The specified user is not a member.");
+            }
+
+            // Check if member already has organization
+            if (!string.IsNullOrEmpty(member.Organization))
+            {
+                //return ApiResponse<bool>.ErrorResponse(false,
+                //    "This user is already part of an organization.");
+                if (member.ManagedById == businessOwnerId)
+                {
+                    return ApiResponse<bool>.ErrorResponse(false,
+                        "This user is already part of your organization.");
+                }
+                else
+                {
+                    return ApiResponse<bool>.ErrorResponse(false,
+                        "This user is already part of another organization.");
+                }
+            }
+
+            // Check for existing pending invitation
+            var existingInvitation = await _organizationInviteRepository.IsInvitationExistsAsync(businessOwnerId, member.Id);
+
+            if (existingInvitation)
+            {
+                return ApiResponse<bool>.ErrorResponse(false,
+                    "You already have a pending invitation for this user.");
+            }
+
+            // Create new invitation
+            var invitation = new Domain.Entities.OrganizationInvitation
+            {
+                BusinessOwnerId = businessOwnerId,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow,
+                Status = InvitationStatus.Pending,
+                Type = InvitationType.Invite
+            };
+
+            // TODO: Send email notification to member
+            // await _emailService.SendInvitationEmailAsync(member.Email, businessOwner.Organization);
+
+            var result = await _organizationInviteRepository.AddAsync(invitation);
+            if (!result)
+            {
+                return ApiResponse<bool>.ErrorResponse(false, "Failed to send invitation.");
+            }
+            return ApiResponse<bool>.SuccessResponse(true, "Invitation sent successfully.");
+        }
+
+        public async Task<ApiResponse<List<SendInvitationResult>>> SendInvitationListAsync(Guid businessOwnerId, List<string> memberEmails)
+        {
+            var results = new List<SendInvitationResult>();
+            foreach (var memberEmail in memberEmails.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var result = await SendInvitationAsync(businessOwnerId, memberEmail);
+                results.Add(new SendInvitationResult
+                {
+                    Email = memberEmail,
+                    Success = result.Success && result.Data,
+                    Message = result.Message
+                });
+            }
+            return ApiResponse<List<SendInvitationResult>>.SuccessResponse(
+                results,
+                "Invitations processed."
+            );
+        }
+
+    }
+}

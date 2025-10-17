@@ -46,7 +46,6 @@ namespace MSP.Application.Services.Implementations.Meeting
                 Title = request.Title,
                 Description = request.Description,
                 StartTime = request.StartTime,
-                EndTime = request.StartTime.AddHours(1),
                 Status = MSP.Shared.Enums.MeetingEnum.Scheduled.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -99,7 +98,7 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (meeting == null)
                 return ApiResponse<string>.ErrorResponse(null, "Meeting not found");
 
-            meeting.Status = MSP.Shared.Enums.MeetingEnum.Cancel.ToString();
+            meeting.Status = MSP.Shared.Enums.MeetingEnum.Cancelled.ToString();
             meeting.UpdatedAt = DateTime.UtcNow;
 
             await _meetingRepository.UpdateAsync(meeting);
@@ -149,6 +148,22 @@ namespace MSP.Application.Services.Implementations.Meeting
             return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting updated successfully");
         }
 
+
+        public async Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime)
+        {
+            var meeting = await _meetingRepository.GetMeetingByIdAsync(meetingId);
+            if (meeting == null)
+                return ApiResponse<string>.ErrorResponse(null, "Meeting not found");
+
+            meeting.EndTime = endTime;
+            meeting.Status = MSP.Shared.Enums.MeetingEnum.Finished.ToString();
+            meeting.UpdatedAt = DateTime.UtcNow;
+
+            await _meetingRepository.UpdateAsync(meeting);
+            await _meetingRepository.SaveChangesAsync();
+
+            return ApiResponse<string>.SuccessResponse(null, "Meeting finished successfully");
+        }
 
         private GetMeetingResponse MapToMeetingResponse(Domain.Entities.Meeting meeting)
         {

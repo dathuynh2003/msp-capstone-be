@@ -20,5 +20,14 @@ namespace MSP.Domain.Entities
 
         public virtual ICollection<User> ManagedUsers { get; set; } = new List<User>();
         public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+        // Các invitation/request mà user này là BusinessOwner (nhận request hoặc gửi invite)
+        public virtual ICollection<OrganizationInvitation> OrganizationInvitationsAsOwner { get; set; }
+            = new List<OrganizationInvitation>();
+
+        // Các invitation/request mà user này là Member (nhận invite hoặc gửi request)
+        public virtual ICollection<OrganizationInvitation> OrganizationInvitationsAsMember { get; set; }
+            = new List<OrganizationInvitation>();
+
     }
 }

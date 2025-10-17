@@ -27,6 +27,8 @@ namespace MSP.Infrastructure.Persistence.DBContext
         public DbSet<Package> Packages { get; set; }
         public DbSet<Feature> Features { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<OrganizationInvitation> OrganizationInvitations { get; set; }
+
 
 
 
@@ -225,6 +227,30 @@ namespace MSP.Infrastructure.Persistence.DBContext
                     .WithMany()
                     .HasForeignKey(t => t.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // OrganizationInvitation
+            builder.Entity<OrganizationInvitation>(entity =>
+            {
+                // Primary key
+                entity.HasKey(e => e.Id);
+
+                // BusinessOwner relationship
+                entity.HasOne(e => e.BusinessOwner)
+                    .WithMany(u => u.OrganizationInvitationsAsOwner)
+                    .HasForeignKey(e => e.BusinessOwnerId)
+                    .OnDelete(DeleteBehavior.Restrict); // Tránh cascade delete conflict
+
+                // Member relationship
+                entity.HasOne(e => e.Member)
+                    .WithMany(u => u.OrganizationInvitationsAsMember)
+                    .HasForeignKey(e => e.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict); // Tránh cascade delete conflict
+
+                // Indexes for better query performance
+                entity.HasIndex(e => new { e.BusinessOwnerId, e.Status });
+                entity.HasIndex(e => new { e.MemberId, e.Status });
+                entity.HasIndex(e => e.Type);
             });
         }
     }

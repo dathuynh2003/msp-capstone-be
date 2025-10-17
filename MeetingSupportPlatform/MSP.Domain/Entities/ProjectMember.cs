@@ -11,5 +11,6 @@ namespace MSP.Domain.Entities
         public virtual User Member { get; set; }
 
         public DateTime JoinedAt { get; set; }
+        public DateTime? LeftAt { get; set; }
     }
 }

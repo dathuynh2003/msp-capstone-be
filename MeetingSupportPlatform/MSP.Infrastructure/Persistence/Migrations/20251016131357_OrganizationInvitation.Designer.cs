@@ -3,6 +3,7 @@ using System;
 using MSP.Infrastructure.Persistence.DBContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MSP.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251016131357_OrganizationInvitation")]
+    partial class OrganizationInvitation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -429,9 +432,6 @@ namespace MSP.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("LeftAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uuid");
 
@@ -488,7 +488,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -708,7 +708,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c1d2e3f4-a5b6-4789-1234-56789abcdef2"),
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "b1f15491-068b-4e9d-896e-1e7c0aa48d08",
+                            ConcurrencyStamp = "db534b55-fd97-45f4-bd74-789e25511cd9",
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "admin@gmail.com",
                             EmailConfirmed = true,
@@ -718,9 +718,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@GMAIL.COM",
                             NormalizedUserName = "ADMIN",
-                            PasswordHash = "AQAAAAIAAYagAAAAEDZKgkPFQds3PUaVtSslye7zQ+5ecyNqotlG0YT96C3tcsIR1XfHSLcFLQGiNDP/kQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAECrA3BOZYcl99Z2J39OL/ra/WZJNb7K7drFapOQYo0AejU9PX7H2OVOTZhij39Eu4Q==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "2d684221-47e9-4990-8059-8b9f15f3914e",
+                            SecurityStamp = "3516f4f7-a6a2-4523-b4c8-c6ffe2af4e95",
                             TwoFactorEnabled = false,
                             UserName = "admin"
                         },
@@ -728,7 +728,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c2d4e3f4-a5b6-4789-1234-56789abcdef2"),
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "8df1c91a-9c42-4890-a10b-d472f5b5a0d2",
+                            ConcurrencyStamp = "f137afa1-4efb-45b2-ac7e-415075f45ddc",
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "member@gmail.com",
                             EmailConfirmed = true,
@@ -738,9 +738,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "MEMBER@GMAIL.COM",
                             NormalizedUserName = "MEMBER",
-                            PasswordHash = "AQAAAAIAAYagAAAAEJvP8+lSWu35KTtb/qCSH5TLBsRwGJFJdc4/PwDSz5p9wCkJ2WtOfrh2ePEmA+4gSw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEO7PKUuk/VhRghafrxegIa/W1E4oGrJa2TZiZfXgzM4bjMMGPyIqqaD77tfUfrHHyg==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "b90c8663-f3bc-42ca-a722-fb8950210319",
+                            SecurityStamp = "cf483dd8-b600-4e12-b6d8-1c651019a981",
                             TwoFactorEnabled = false,
                             UserName = "Member"
                         },
@@ -748,7 +748,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c3d4e3f4-a5b6-4789-1234-56789abcdef2"),
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "ab104e80-08f5-4300-875f-e9738156f588",
+                            ConcurrencyStamp = "a198e953-4c26-4250-82b2-c0b36da71f5f",
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "manager@gmail.com",
                             EmailConfirmed = true,
@@ -758,9 +758,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "MANAGER@GMAIL.COM",
                             NormalizedUserName = "PROJECTMANAGER",
-                            PasswordHash = "AQAAAAIAAYagAAAAELtyTiFmiRjPO8QgtmhqOjrnlXe4fRksqKEsqtYJFgNaDNu4z+L1wzyqe9T5Nm5s9w==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEPqN4xLFnZi5weJREwfyAn55KSN1gMygd7Z6/vr4IsTnGeMwrKGtZTZE/PvCcZSKxA==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "d04bc051-3345-4532-9024-ad4236a0c8ec",
+                            SecurityStamp = "de944b84-baa1-4392-9523-7419101eb27d",
                             TwoFactorEnabled = false,
                             UserName = "ProjectManager"
                         },
@@ -768,7 +768,7 @@ namespace MSP.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c4d4e3f4-a5b6-4789-1234-56789abcdef2"),
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "94cf52e0-247a-4e6b-b52d-0cae1220a5ad",
+                            ConcurrencyStamp = "a2d0e35a-7850-4920-80b9-27e8c5931f47",
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "businessowner@gmail.com",
                             EmailConfirmed = true,
@@ -779,9 +779,9 @@ namespace MSP.Infrastructure.Persistence.Migrations
                             NormalizedEmail = "BUSINESSOWNER@GMAIL.COM",
                             NormalizedUserName = "BUSINESSOWNER",
                             Organization = "FPT Software",
-                            PasswordHash = "AQAAAAIAAYagAAAAEMkJG0p9RUEJN3zvqsHhsF4YIg1Fh5E0DgoIkDU3ha/pF1Ds1tKIBVLLt++xh4ac/Q==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEOL7UMtzYAwJRN/H3Z27+wpq14RcFESj+wZ+LrQJ9uJ15WlbGlVHauZbDbkpvMyzRQ==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "1ec65ad9-061c-4f4d-84da-4f92c674f908",
+                            SecurityStamp = "91e2cad6-c450-454b-8173-c837b3b5f0cd",
                             TwoFactorEnabled = false,
                             UserName = "BusinessOwner"
                         });
@@ -1188,7 +1188,8 @@ namespace MSP.Infrastructure.Persistence.Migrations
                     b.HasOne("MSP.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Project");
 

@@ -9,5 +9,6 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<Project>> GetProjectsByManagerIdAsync(Guid managerId);
         Task<IEnumerable<Project>> GetProjectsByBOIdAsync(Guid boId);
         Task<Project?> GetProjectByIdAsync(Guid id);
+        Task<List<Guid>> GetProjectIdsByOwnerIdAsync(Guid ownerId);
     }
 }
