@@ -212,7 +212,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             return ApiResponse<PagingResponse<GetTaskResponse>>.SuccessResponse(response);
         }
 
-        public async Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByUserIdAsync(PagingRequest request, Guid userId)
+        public async Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByUserIdAndProjectIdAsync(PagingRequest request, Guid userId, Guid projectId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
@@ -221,18 +221,22 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             }
 
             var tasks = await _projectTaskRepository.FindWithIncludePagedAsync(
-                predicate: p => p.UserId == userId && !p.IsDeleted,
+                predicate: p => p.UserId == userId && p.ProjectId == projectId && !p.IsDeleted,
                 include: query => query
                     .Include(p => p.User)
                     .Include(p => p.Milestones),
                 pageNumber: request.PageIndex,
                 pageSize: request.PageSize,
-                asNoTracking: true);
+                asNoTracking: true
+            );
+
             if (tasks == null || !tasks.Any())
             {
-                return ApiResponse<PagingResponse<GetTaskResponse>>.ErrorResponse(null, "No tasks found for the user");
+                return ApiResponse<PagingResponse<GetTaskResponse>>.ErrorResponse(null, "No tasks found for this user and project");
             }
-            var totalTasks = await _projectTaskRepository.CountAsync(p => p.UserId == userId && !p.IsDeleted);
+
+            var totalTasks = await _projectTaskRepository.CountAsync(p => p.UserId == userId && p.ProjectId == projectId && !p.IsDeleted);
+
             var response = new PagingResponse<GetTaskResponse>
             {
                 Items = tasks.Select(task => new GetTaskResponse
@@ -266,8 +270,10 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 PageIndex = request.PageIndex,
                 PageSize = request.PageSize
             };
+
             return ApiResponse<PagingResponse<GetTaskResponse>>.SuccessResponse(response);
         }
+
 
         public async Task<ApiResponse<GetTaskResponse>> UpdateTaskAsync(UpdateTaskRequest request)
         {

@@ -11,7 +11,7 @@ namespace MSP.Application.Services.Interfaces.ProjectTask
         Task<ApiResponse<string>> DeleteTaskAsync(Guid taskId);
         Task<ApiResponse<GetTaskResponse>> GetTaskByIdAsync(Guid taskId);
         Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByProjectIdAsync(PagingRequest request, Guid projectId);
-        Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByUserIdAsync(PagingRequest request, Guid userId);
+        Task<ApiResponse<PagingResponse<GetTaskResponse>>> GetTasksByUserIdAndProjectIdAsync(PagingRequest request, Guid userId, Guid projectId);
         Task<ApiResponse<List<GetTaskResponse>>> GetTasksByMilestoneIdAsync(Guid milestoneId);
     }
 }

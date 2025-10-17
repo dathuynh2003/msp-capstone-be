@@ -375,6 +375,83 @@ namespace MSP.Application.Services.Implementations.Project
             return ApiResponse<PagingResponse<GetProjectResponse>>.SuccessResponse(pagingResponse);
         }
 
+        public async Task<ApiResponse<PagingResponse<GetProjectResponse>>> GetProjectsByMemberIdAsync(PagingRequest request, Guid memberId)
+        {
+            var user = await _userManager.FindByIdAsync(memberId.ToString());
+            if (user == null)
+                return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "User not found");
+
+            // Lấy danh sách ProjectMember của member
+            var projectMembers = await _projectMemberRepository.FindWithIncludePagedAsync(
+                predicate: pm => pm.MemberId == memberId,
+                include: query => query.Include(pm => pm.Project).ThenInclude(p => p.Owner)
+                                       .Include(pm => pm.Project).ThenInclude(p => p.CreatedBy),
+                pageNumber: request.PageIndex,
+                pageSize: request.PageSize,
+                asNoTracking: true);
+
+            if (projectMembers == null || !projectMembers.Any())
+            {
+                return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found for the specified member");
+            }
+
+            var response = new List<GetProjectResponse>();
+
+            foreach (var pm in projectMembers)
+            {
+                var project = pm.Project;
+
+                if (project == null || project.IsDeleted)
+                    continue;
+
+                var ownerRole = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty;
+                var createdByRole = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty;
+
+                response.Add(new GetProjectResponse
+                {
+                    Id = project.Id,
+                    Name = project.Name,
+                    Description = project.Description,
+                    StartDate = project.StartDate,
+                    EndDate = project.EndDate,
+                    OwnerId = project.OwnerId,
+                    CreatedById = project.CreatedById,
+                    Status = project.Status,
+                    Owner = new GetUserResponse
+                    {
+                        Id = project.Owner.Id,
+                        FullName = project.Owner.FullName,
+                        Email = project.Owner.Email,
+                        AvatarUrl = project.Owner.AvatarUrl,
+                        Role = ownerRole
+                    },
+                    CreatedBy = new GetUserResponse
+                    {
+                        Id = project.CreatedBy.Id,
+                        FullName = project.CreatedBy.FullName,
+                        Email = project.CreatedBy.Email,
+                        AvatarUrl = project.CreatedBy.AvatarUrl,
+                        Role = createdByRole
+                    },
+                    CreatedAt = project.CreatedAt,
+                    UpdatedAt = project.UpdatedAt
+                });
+            }
+
+            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == memberId && !pm.Project.IsDeleted);
+
+            var pagingResponse = new PagingResponse<GetProjectResponse>
+            {
+                Items = response,
+                TotalItems = totalItems,
+                PageIndex = request.PageIndex,
+                PageSize = request.PageSize
+            };
+
+            return ApiResponse<PagingResponse<GetProjectResponse>>.SuccessResponse(pagingResponse);
+        }
+
+
         public async Task<ApiResponse<string>> RemoveProjectMemberAsync(Guid pmId)
         {
             var projectMember = await _projectMemberRepository.GetByIdAsync(pmId);
