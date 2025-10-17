@@ -24,10 +24,6 @@
                                         Xác nhận Email
                                     </a>
                                 </div>
-                                <p style='color: #999999; font-size: 14px; margin-top: 25px;'>
-                                    Nếu nút trên không hoạt động, sao chép và dán liên kết này vào trình duyệt:<br/>
-                                    <a href='{confirmationUrl}' style='color: #ff6f00; word-break: break-all;'>{confirmationUrl}</a>
-                                </p>
                                 <p style='color: #999999; font-size: 12px; margin-top: 20px;'>
                                     Liên kết này sẽ hết hạn trong 24 giờ vì lý do bảo mật.
                                 </p>

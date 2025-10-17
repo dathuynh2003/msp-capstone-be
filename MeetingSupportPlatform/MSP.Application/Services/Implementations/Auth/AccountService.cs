@@ -75,7 +75,7 @@ namespace MSP.Application.Services.Implementations.Auth
             var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
             // Gửi email xác nhận bằng Hangfire
-            var confirmationUrl = $"https://localhost:7129/api/v1/auth/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
+            var confirmationUrl = $"http://localhost:3000/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
             var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FullName, confirmationUrl);
 
             _notificationService.SendEmailNotification(
@@ -225,7 +225,7 @@ namespace MSP.Application.Services.Implementations.Auth
 
             if (user.EmailConfirmed)
             {
-                return ApiResponse<string>.SuccessResponse("Email already confirmed.", "Email is already confirmed.");
+                return ApiResponse<string>.SuccessResponse("Email already confirmed.", "Email đã được xác nhận thành công.");
             }
 
             var result = await _userManager.ConfirmEmailAsync(user, confirmEmailRequest.Token);
@@ -244,7 +244,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 Data = $"{{\"eventType\":\"EmailConfirmed\",\"userId\":\"{user.Id}\"}}"
             });
 
-            return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email confirmation successful.");
+            return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email đã được xác nhận thành công.");
         }
 
         public async Task<ApiResponse<string>> ResendConfirmationEmailAsync(ResendConfirmationEmailRequest resendRequest)
