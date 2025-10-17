@@ -11,6 +11,6 @@ namespace MSP.Shared.Enums
         Scheduled,
         Ongoing,
         Finished,
-        Cancel,
+        Cancelled,
     }
 }

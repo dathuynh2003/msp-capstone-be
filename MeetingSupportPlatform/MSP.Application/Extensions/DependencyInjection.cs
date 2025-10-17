@@ -34,6 +34,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IOrganizationInvitationService, OrganizationInvitationService>();
             services.AddScoped<IMeetingService, MeetingService>();
+            services.AddHostedService<MeetingCronJobService>();
 
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(
