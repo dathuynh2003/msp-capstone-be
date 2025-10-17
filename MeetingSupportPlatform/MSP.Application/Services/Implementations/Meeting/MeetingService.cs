@@ -117,21 +117,26 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (project == null)
                 return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Project not found");
 
-            // Lấy danh sách attendees mới
-            var attendees = await _meetingRepository.GetAttendeesAsync(request.AttendeeIds);
-
-            // Cập nhật thông tin meeting
-            meeting.Title = request.Title;
-            meeting.Description = request.Description;
-            meeting.MilestoneId = request.MilestoneId;
-            meeting.StartTime = request.StartTime;
+ 
+            meeting.Title = request.Title ?? meeting.Title;
+            meeting.Description = request.Description ?? meeting.Description;
+            meeting.MilestoneId = request.MilestoneId ?? meeting.MilestoneId;
+            meeting.StartTime = request.StartTime ?? meeting.StartTime;
+            meeting.EndTime = meeting.StartTime.AddHours(1);
             meeting.UpdatedAt = DateTime.UtcNow;
+            meeting.Summary = request.Summary ?? meeting.Summary;
+            meeting.Transcription = request.Transcription ?? meeting.Transcription;
+            meeting.RecordUrl = request.RecordUrl ?? meeting.RecordUrl;
 
-            // Cập nhật attendees - clear existing và add new
-            meeting.Attendees.Clear();
-            foreach (var attendee in attendees)
+            // Chỉ cập nhật attendees khi có danh sách mới
+            if (request.AttendeeIds != null && request.AttendeeIds.Any())
             {
-                meeting.Attendees.Add(attendee);
+                var attendees = await _meetingRepository.GetAttendeesAsync(request.AttendeeIds);
+                meeting.Attendees.Clear();
+                foreach (var attendee in attendees)
+                {
+                    meeting.Attendees.Add(attendee);
+                }
             }
 
             await _meetingRepository.UpdateAsync(meeting);
@@ -142,6 +147,7 @@ namespace MSP.Application.Services.Implementations.Meeting
 
             return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting updated successfully");
         }
+
 
         public async Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime)
         {
@@ -199,7 +205,8 @@ namespace MSP.Application.Services.Implementations.Meeting
                 {
                     Id = a.Id,
                     Email = a.Email,
-                    AvatarUrl = a.AvatarUrl
+                    AvatarUrl = a.AvatarUrl,
+                    FullName = a.FullName,            
                 }).ToList() ?? new List<AttendeeResponse>()
             };
         }

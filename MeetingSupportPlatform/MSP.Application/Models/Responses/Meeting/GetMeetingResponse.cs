@@ -31,13 +31,14 @@ namespace MSP.Application.Models.Responses.Meeting
             public string? RecordUrl { get; set; } 
             public string? Transcription { get; set; }
             public string? Summary { get; set; }
-        public List<AttendeeResponse> Attendees { get; set; } = new();
-        }
+            public List<AttendeeResponse> Attendees { get; set; } = new();
+    }
 
-        public class AttendeeResponse
-        {
-            public Guid Id { get; set; }
-            public string Email { get; set; } = string.Empty;
-            public string? AvatarUrl { get; set; }
-        }
+    public class AttendeeResponse
+    {
+        public Guid Id { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
+    }
 }
