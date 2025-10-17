@@ -86,17 +86,18 @@ namespace MSP.WebAPI.Controllers
             return Ok(response);
         }
 
-        [HttpGet("by-user/{userId}")]
-        public async Task<IActionResult> GetTasksByUserId([FromQuery] PagingRequest request, [FromRoute] Guid userId)
+        [HttpGet("by-user-and-project/{userId}/{projectId}")]
+        public async Task<IActionResult> GetTasksByUserIdAndProjectId([FromQuery] PagingRequest request, [FromRoute] Guid userId, [FromRoute] Guid projectId)
         {
-            var response = await _projectTaskService.GetTasksByUserIdAsync(request, userId);
+            var response = await _projectTaskService.GetTasksByUserIdAndProjectIdAsync(request, userId, projectId);
             if (!response.Success)
             {
-                _logger.LogError("GetTasksByUserId failed: {Message}", response.Message);
+                _logger.LogError("GetTasksByUserIdAndProjectId failed: {Message}", response.Message);
                 return BadRequest(response);
             }
             return Ok(response);
         }
+
 
         [HttpGet("by-milestone/{milestoneId}")]
         public async Task<IActionResult> GetTasksByMilestoneId([FromRoute] Guid milestoneId)

@@ -111,6 +111,18 @@ namespace MSP.WebAPI.Controllers
             return Ok(response);
         }
 
+        [HttpGet("by-member/{memberId}")]
+        public async Task<IActionResult> GetProjectsByMemberId([FromQuery] PagingRequest request, [FromRoute] Guid memberId)
+        {
+            var response = await _projectService.GetProjectsByMemberIdAsync(request, memberId);
+            if (!response.Success)
+            {
+                _logger.LogError("GetProjectsByMemberId failed: {Message}", response.Message);
+                return BadRequest(response);
+            }
+            return Ok(response);
+        }
+
         [HttpPost("project-member")]
         public async Task<IActionResult> AddProjectMember([FromBody] AddProjectMemeberRequest request)
         {
