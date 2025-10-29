@@ -28,7 +28,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("CreateTask failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -42,7 +42,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("UpdateTask failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -56,7 +56,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("DeleteTask failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -69,7 +69,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetTaskById failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -81,7 +81,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetTasksByProjectId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -93,7 +93,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetTasksByUserIdAndProjectId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -106,7 +106,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetTasksByMilestoneId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }

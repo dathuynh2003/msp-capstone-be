@@ -25,7 +25,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("CreateMilestone failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -37,7 +37,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("UpdateMilestone failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -49,7 +49,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetMilestoneById failed: {Message}", response.Message);
-                return NotFound(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -61,7 +61,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetMilestonesByProjectId failed: {Message}", response.Message);
-                return NotFound(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -73,7 +73,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("DeleteMilestone failed: {Message}", response.Message);
-                return NotFound(response);
+                return Ok(response);
             }
             return Ok(response);
         }

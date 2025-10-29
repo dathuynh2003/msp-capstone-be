@@ -27,7 +27,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("CreateProject failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -41,7 +41,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("UpdateProject failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -55,7 +55,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("DeleteProject failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -69,7 +69,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetProjectById failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
 
             return Ok(response);
@@ -82,7 +82,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetAllProjects failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -94,7 +94,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetProjectsByManagerId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -106,7 +106,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetProjectsByBOId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -118,7 +118,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetProjectsByMemberId failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -130,7 +130,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("AddProjectMember failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -142,7 +142,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("RemoveProjectMember failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }
@@ -154,7 +154,7 @@ namespace MSP.WebAPI.Controllers
             if (!response.Success)
             {
                 _logger.LogError("GetProjectMembers failed: {Message}", response.Message);
-                return BadRequest(response);
+                return Ok(response);
             }
             return Ok(response);
         }

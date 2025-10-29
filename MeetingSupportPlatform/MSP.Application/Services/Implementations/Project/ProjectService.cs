@@ -309,22 +309,28 @@ namespace MSP.Application.Services.Implementations.Project
             var user = await _userManager.FindByIdAsync(managerId.ToString());
             if (user == null)
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "User not found");
-            var projects = await _projectRepository.FindWithIncludePagedAsync(
-                predicate: p => p.CreatedById == managerId && !p.IsDeleted,
-                include: query => query
-                    .Include(p => p.Owner)
-                    .Include(p => p.CreatedBy),
+            // Lấy danh sách ProjectMember của member
+            var projectMembers = await _projectMemberRepository.FindWithIncludePagedAsync(
+                predicate: pm => pm.MemberId == managerId,
+                include: query => query.Include(pm => pm.Project).ThenInclude(p => p.Owner)
+                                       .Include(pm => pm.Project).ThenInclude(p => p.CreatedBy),
                 pageNumber: request.PageIndex,
                 pageSize: request.PageSize,
                 asNoTracking: true);
-            if (projects == null || !projects.Any())
+
+            if (projectMembers == null || !projectMembers.Any())
             {
-                return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found for the specified Manager");
+                return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No projects found for the specified manager");
             }
             var response = new List<GetProjectResponse>();
 
-            foreach (var project in projects)
+            foreach (var pm in projectMembers)
             {
+                var project = pm.Project;
+
+                if (project == null || project.IsDeleted)
+                    continue;
+
                 var ownerRole = (await _userManager.GetRolesAsync(project.Owner)).FirstOrDefault() ?? string.Empty;
                 var createdByRole = (await _userManager.GetRolesAsync(project.CreatedBy)).FirstOrDefault() ?? string.Empty;
 
@@ -364,10 +370,12 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No results found. Try adjusting your search criteria.");
             }
 
+            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == managerId && !pm.Project.IsDeleted);
+
             var pagingResponse = new PagingResponse<GetProjectResponse>
             {
                 Items = response,
-                TotalItems = await _projectRepository.CountAsync(p => p.CreatedById == managerId && !p.IsDeleted),
+                TotalItems = totalItems,
                 PageIndex = request.PageIndex,
                 PageSize = request.PageSize
             };
