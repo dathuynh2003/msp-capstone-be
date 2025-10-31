@@ -30,10 +30,28 @@ namespace MSP.Infrastructure.Repositories
         public async Task<IEnumerable<Milestone>> GetMilestonesByIdsAsync(IEnumerable<Guid> ids)
         {
             return await _context.Milestones
+                //.AsNoTracking()
                 .Where(m => ids.Contains(m.Id) && !m.IsDeleted)
                 .Include(m => m.ProjectTasks)
                 .Include(m => m.User)
                 .ToListAsync();
         }
+
+        public void Attach(Milestone milestone)
+        {
+            if (milestone == null)
+            {
+                throw new ArgumentNullException(nameof(milestone));
+            }
+
+            var tracked = _context.ChangeTracker.Entries<Milestone>()
+                           .FirstOrDefault(e => e.Entity.Id == milestone.Id);
+
+            if (tracked == null)
+            {
+                _context.Attach(milestone);
+            }
+        }
+
     }
 }

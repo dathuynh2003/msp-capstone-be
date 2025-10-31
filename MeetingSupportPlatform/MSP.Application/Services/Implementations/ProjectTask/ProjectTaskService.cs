@@ -29,7 +29,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
         public async Task<ApiResponse<GetTaskResponse>> CreateTaskAsync(CreateTaskRequest request)
         {
             var project = await _projectRepository.GetByIdAsync(request.ProjectId);
-            if (project == null)
+            if (project == null || project.IsDeleted)
             {
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found");
             }
@@ -60,11 +60,16 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             if (request.MilestoneIds != null && request.MilestoneIds.Any())
             {
                 var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
-                if (milestones == null || !milestones.Any())
+                if (milestones == null || !milestones.Any() || milestones.Any(m => m.IsDeleted))
                 {
-                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found");
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found or have been deleted");
                 }
-                newTask.Milestones = milestones.ToList();
+
+                foreach (var milestone in milestones)
+                {
+                    _milestoneRepository.Attach(milestone);
+                    newTask.Milestones.Add(milestone);
+                }
             }
 
             await _projectTaskRepository.AddAsync(newTask);
@@ -278,9 +283,15 @@ namespace MSP.Application.Services.Implementations.ProjectTask
         public async Task<ApiResponse<GetTaskResponse>> UpdateTaskAsync(UpdateTaskRequest request)
         {
             var task = await _projectTaskRepository.GetTaskByIdAsync(request.Id);
-            if (task == null)
+            if (task == null || task.IsDeleted)
             {
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
+            }
+
+            var project = await _projectRepository.GetByIdAsync(task.ProjectId);
+            if (project == null || project.IsDeleted)
+            {
+                return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found or has been deleted");
             }
 
             User? user = null;
@@ -305,9 +316,9 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             if (request.MilestoneIds != null)
             {
                 var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
-                if (milestones == null || milestones.Count() != request.MilestoneIds.Length)
+                if (milestones == null || milestones.Count() != request.MilestoneIds.Length || milestones.Any(m => m.IsDeleted))
                 {
-                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found");
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found or have been deleted");
                 }
 
                 // Xóa các milestones cũ
@@ -315,6 +326,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 // Thêm milestones mới
                 foreach (var milestone in milestones)
                 {
+                    _milestoneRepository.Attach(milestone);
                     task.Milestones.Add(milestone);
                 }
             }

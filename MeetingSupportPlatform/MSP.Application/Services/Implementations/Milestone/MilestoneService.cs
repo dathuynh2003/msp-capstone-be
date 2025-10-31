@@ -13,13 +13,15 @@ namespace MSP.Application.Services.Implementations.Milestone
     {
         private readonly IMilestoneRepository _milestoneRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly UserManager<User> _userManager;
 
-        public MilestoneService(IMilestoneRepository milestoneRepository, IProjectRepository projectRepository, UserManager<User> userManager)
+        public MilestoneService(IMilestoneRepository milestoneRepository, IProjectRepository projectRepository, UserManager<User> userManager, IProjectTaskRepository projectTaskRepository)
         {
             _milestoneRepository = milestoneRepository;
             _projectRepository = projectRepository;
             _userManager = userManager;
+            _projectTaskRepository = projectTaskRepository;
         }
 
         public async Task<ApiResponse<GetMilestoneResponse>> CreateMilestoneAsync(CreateMilestoneRequest request)
@@ -30,7 +32,7 @@ namespace MSP.Application.Services.Implementations.Milestone
 
             var project = await _projectRepository.GetByIdAsync(request.ProjectId);
 
-            if (project == null)
+            if (project == null || project.IsDeleted)
             {
                 return ApiResponse<GetMilestoneResponse>.ErrorResponse(null, "Project not found");
             }
@@ -67,8 +69,26 @@ namespace MSP.Application.Services.Implementations.Milestone
 
         public async Task<ApiResponse<string>> DeleteMilestoneAsync(Guid milestoneId)
         {
-            var milestone = await _milestoneRepository.GetMilestoneByIdAsync(milestoneId);
-            if (milestone == null)
+            // Lấy các task liên quan đến milestone này trước
+            var tasks = await _projectTaskRepository.GetTasksByMilestoneIdAsync(milestoneId);
+            
+            if (tasks != null && tasks.Any())
+            {
+                foreach (var task in tasks)
+                {
+                    // Tìm milestone trong collection của task (đã được track)
+                    var milestoneToRemove = task.Milestones.FirstOrDefault(m => m.Id == milestoneId);
+                    if (milestoneToRemove != null)
+                    {
+                        task.Milestones.Remove(milestoneToRemove);
+                    }
+                }
+                await _projectTaskRepository.SaveChangesAsync();
+            }
+
+            // Lấy milestone để xóa (không cần AsNoTracking vì chỉ dùng để soft delete)
+            var milestone = await _milestoneRepository.GetByIdAsync(milestoneId);
+            if (milestone == null || milestone.IsDeleted)
             {
                 return ApiResponse<string>.ErrorResponse(null, "Milestone not found");
             }
@@ -81,7 +101,7 @@ namespace MSP.Application.Services.Implementations.Milestone
         public async Task<ApiResponse<GetMilestoneResponse>> GetMilestoneByIdAsync(Guid milestoneId)
         {
             var milestone = await _milestoneRepository.GetMilestoneByIdAsync(milestoneId);
-            if (milestone == null)
+            if (milestone == null || milestone.IsDeleted)
             {
                 return ApiResponse<GetMilestoneResponse>.ErrorResponse(null, "Milestone not found");
             }
@@ -101,6 +121,11 @@ namespace MSP.Application.Services.Implementations.Milestone
         public async Task<ApiResponse<List<GetMilestoneResponse>>> GetMilestonesByProjectIdAsync(Guid projectId)
         {
             var milestones = await _milestoneRepository.GetMilestonesByProjectIdAsync(projectId);
+            if (milestones == null || !milestones.Any())
+            {
+                return ApiResponse<List<GetMilestoneResponse>>.ErrorResponse(null, "No milestones found for the project");
+            }
+
             var response = milestones.Select(milestone => new GetMilestoneResponse
             {
                 Id = milestone.Id,
@@ -116,23 +141,28 @@ namespace MSP.Application.Services.Implementations.Milestone
 
         public async Task<ApiResponse<GetMilestoneResponse>> UpdateMilestoneAsync(UpdateMilestoneRequest request)
         {
-            var milestone = await _milestoneRepository.GetMilestoneByIdAsync(request.Id);
-            if (milestone == null)
+            // Sử dụng GetByIdAsync thay vì GetMilestoneByIdAsync để tránh load ProjectTasks
+            var milestone = await _milestoneRepository.GetByIdAsync(request.Id);
+            if (milestone == null || milestone.IsDeleted)
             {
                 return ApiResponse<GetMilestoneResponse>.ErrorResponse(null, "Milestone not found");
             }
+            
             var project = await _projectRepository.GetByIdAsync(milestone.ProjectId);
-            if (project == null)
+            if (project == null || project.IsDeleted)
             {
                 return ApiResponse<GetMilestoneResponse>.ErrorResponse(null, "Project not found");
             }
 
+            // Chỉ cập nhật các thuộc tính cần thiết, không động chạm đến ProjectTasks collection
             milestone.Name = request.Name;
             milestone.DueDate = request.DueDate;
             milestone.Description = request.Description;
             milestone.UpdatedAt = DateTime.UtcNow;
+            
             await _milestoneRepository.UpdateAsync(milestone);
             await _milestoneRepository.SaveChangesAsync();
+            
             var response = new GetMilestoneResponse
             {
                 Id = milestone.Id,
@@ -143,6 +173,7 @@ namespace MSP.Application.Services.Implementations.Milestone
                 CreatedAt = milestone.CreatedAt,
                 UpdatedAt = milestone.UpdatedAt
             };
+            
             return ApiResponse<GetMilestoneResponse>.SuccessResponse(response, "Milestone updated successfully");
         }
     }
