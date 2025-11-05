@@ -26,10 +26,10 @@ namespace MSP.Infrastructure.Persistence.DBContext
         public DbSet<Meeting> Meetings { get; set; }
         public DbSet<Todo> Todos { get; set; }
         public DbSet<Package> Packages { get; set; }
-        public DbSet<Feature> Features { get; set; }
+        public DbSet<Limitation> Limitations { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<OrganizationInvitation> OrganizationInvitations { get; set; }
-
+        public DbSet<TaskReassignRequest> TaskReassignRequests { get; set; }
 
 
 
@@ -58,16 +58,16 @@ namespace MSP.Infrastructure.Persistence.DBContext
 
             // Package - Feature (many-to-many)
             builder.Entity<Package>()
-                .HasMany(p => p.Features)
+                .HasMany(p => p.Limitations)
                 .WithMany(f => f.Packages)
                 .UsingEntity<Dictionary<string, object>>(
-                    "PackageFeature",
-                    j => j.HasOne<Feature>().WithMany().HasForeignKey("FeatureId").OnDelete(DeleteBehavior.Cascade),
+                    "PackageLimitation",
+                    j => j.HasOne<Limitation>().WithMany().HasForeignKey("LimitationId").OnDelete(DeleteBehavior.Cascade),
                     j => j.HasOne<Package>().WithMany().HasForeignKey("PackageId").OnDelete(DeleteBehavior.Cascade),
                     j =>
                     {
-                        j.HasKey("PackageId", "FeatureId");
-                        j.ToTable("PackageFeatures");
+                        j.HasKey("PackageId", "LimitationId");
+                        j.ToTable("PackageLimitations");
                     });
 
             // Subscription
@@ -255,6 +255,30 @@ namespace MSP.Infrastructure.Persistence.DBContext
                 entity.HasIndex(e => new { e.BusinessOwnerId, e.Status });
                 entity.HasIndex(e => new { e.MemberId, e.Status });
                 entity.HasIndex(e => e.Type);
+            });
+
+            // TaskReassignRequest
+            builder.Entity<TaskReassignRequest>(entity =>
+            {
+                entity.HasOne(r => r.Task)
+                    .WithMany(t => t.TaskReassignRequests)
+                    .HasForeignKey(r => r.TaskId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.FromUser)
+                    .WithMany()
+                    .HasForeignKey(r => r.FromUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.ToUser)
+                    .WithMany()
+                    .HasForeignKey(r => r.ToUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(r => r.Status)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
             });
         }
     }

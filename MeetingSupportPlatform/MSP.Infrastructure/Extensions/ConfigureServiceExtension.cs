@@ -30,6 +30,7 @@ namespace MSP.Infrastructure.Extensions
             services.AddScoped<IOrganizationInviteRepository, OrganizationInvitationRepository>();
             services.AddScoped<IMeetingRepository, MeetingRepository>();
             services.AddScoped<ITodoRepository, TodoRepository>();
+            services.AddScoped<ITaskReassignRequestRepository, TaskReassignRequestRepository>();
             // Register Services
             services.AddScoped<IEmailSender, EmailSender>();
 

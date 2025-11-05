@@ -67,7 +67,7 @@ namespace MSP.Infrastructure.SeedConfiguration
                 FullName = "Nguyen Bao Chau",
                 NormalizedUserName = "MEMBER3",
                 Email = "member3@gmail.com",
-                NormalizedEmail = "MEMBER2@GMAIL.COM",
+                NormalizedEmail = "MEMBER3@GMAIL.COM",
                 EmailConfirmed = true,
                 IsActive = true,
                 SecurityStamp = Guid.NewGuid().ToString(),

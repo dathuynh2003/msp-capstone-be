@@ -33,7 +33,8 @@ namespace MSP.Infrastructure.Processors
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim("fullName", user.FullName),
                 new Claim("userId", user.Id.ToString()),
-                new Claim("role", string.Join(",", roles))
+                new Claim("role", string.Join(",", roles)),
+                new Claim("avatarUrl", user.AvatarUrl ?? string.Empty)
             };
 
             // Add roles

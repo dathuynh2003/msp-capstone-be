@@ -19,6 +19,8 @@ using MSP.Application.Services.Interfaces.Todos;
 using MSP.Application.Services.Implementations.Todos;
 using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
+using MSP.Application.Services.Interfaces.TaskReassignRequest;
+using MSP.Application.Services.Implementations.TaskReassignRequest;
 
 namespace MSP.Application.Extensions
 {
@@ -37,7 +39,10 @@ namespace MSP.Application.Extensions
             services.AddScoped<IOrganizationInvitationService, OrganizationInvitationService>();
             services.AddScoped<IMeetingService, MeetingService>();
             services.AddScoped<ITodoService, TodoService>();
+            services.AddScoped<ITaskReassignRequestService, TaskReassignRequestService>();
             services.AddHostedService<MeetingCronJobService>();
+
+
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(
                 configuration.GetSection("Stream"));

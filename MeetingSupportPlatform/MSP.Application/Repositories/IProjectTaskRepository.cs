@@ -8,5 +8,6 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<ProjectTask>> GetTasksByMilestoneIdAsync(Guid milestoneId);
         Task<ProjectTask?> GetTaskByIdAsync(Guid id);
         Task<IEnumerable<ProjectTask>> GetTasksByProjectIdAsync(Guid projectId);
+        Task<bool> HasTaskOverlapAsync(Guid userId, Guid projectId, Guid excludeTaskId, DateTime startDate, DateTime endDate);
     }
 }

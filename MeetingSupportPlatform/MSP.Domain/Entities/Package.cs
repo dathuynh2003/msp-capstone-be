@@ -12,7 +12,7 @@ namespace MSP.Domain.Entities
         public Guid CreatedById { get; set; }
         public virtual User CreatedBy { get; set; }
 
-        public virtual ICollection<Feature> Features { get; set; } = new List<Feature>();
+        public virtual ICollection<Limitation> Limitations { get; set; } = new List<Limitation>();
 
     }
 }

@@ -32,5 +32,15 @@ namespace MSP.Infrastructure.Repositories
                 .Include(pt => pt.User)
                 .ToListAsync();
         }
+
+        public async Task<bool> HasTaskOverlapAsync(Guid userId, Guid projectId, Guid excludeTaskId, DateTime startDate, DateTime endDate)
+        {
+            return await _context.ProjectTasks.AnyAsync(t =>
+                t.UserId == userId &&
+                t.ProjectId == projectId &&
+                t.Id != excludeTaskId && // loại trừ task hiện tại
+                !(t.EndDate <= startDate || t.StartDate >= endDate)
+            );
+        }
     }
 }
