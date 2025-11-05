@@ -42,7 +42,10 @@ namespace MSP.Application.Services.Implementations.Todos
                     string.IsNullOrWhiteSpace(todo.Description) ||
                     todo.StartDate == null ||
                     todo.EndDate == null ||
-                    todo.UserId == null)
+                    todo.UserId == null ||
+                    todo.Status == Shared.Enums.TodoStatus.ConvertedToTask ||
+                    todo.Status == Shared.Enums.TodoStatus.Deleted)
+
                 {
                     failedIds.Add(todoId);
                     continue;
@@ -61,12 +64,11 @@ namespace MSP.Application.Services.Implementations.Todos
                     CreatedAt = DateTime.UtcNow
                 };
 
-                todo.IsDeleted = true; // Xoá mềm To-do sau khi convert
+                todo.Status = Shared.Enums.TodoStatus.ConvertedToTask;
 
                 todos.Add(todo);
                 tasks.Add(task);
 
-                // Nếu có AutoMapper dùng auto map. Nếu chưa có, map tay:
                 responseTasks.Add(new GetTaskResponse
                 {
                     Id = task.Id,
@@ -121,7 +123,8 @@ namespace MSP.Application.Services.Implementations.Todos
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                Status = Shared.Enums.TodoStatus.Generated
             };
             await _todoRepository.AddAsync(todo);
             await _todoRepository.SaveChangesAsync();
@@ -135,7 +138,8 @@ namespace MSP.Application.Services.Implementations.Todos
                 StartDate = todo.StartDate,
                 EndDate = todo.EndDate,
                 CreatedAt = todo.CreatedAt,
-                UpdatedAt = todo.UpdatedAt
+                UpdatedAt = todo.UpdatedAt,
+                Status = Shared.Enums.TodoStatus.Generated
             };
             return ApiResponse<GetTodoResponse>.SuccessResponse(rs, "Create todo successfully");
         }
@@ -145,7 +149,11 @@ namespace MSP.Application.Services.Implementations.Todos
             var todo = await _todoRepository.GetByIdAsync(todoId);
             if (todo == null)
                 return ApiResponse<string>.ErrorResponse(null, "Todo not found");
-            await _todoRepository.HardDeleteAsync(todo);
+            //await _todoRepository.HardDeleteAsync(todo);
+            //await _todoRepository.SaveChangesAsync();
+            todo.Status = Shared.Enums.TodoStatus.Deleted;
+            todo.IsDeleted = true;
+            await _todoRepository.UpdateAsync(todo);
             await _todoRepository.SaveChangesAsync();
             return ApiResponse<string>.SuccessResponse(null, "Delete todo item successfully");
         }
@@ -171,7 +179,8 @@ namespace MSP.Application.Services.Implementations.Todos
                     FullName = todo.User.FullName,
                     Email = todo.User.Email,
                     AvatarUrl = todo.User.AvatarUrl
-                } : null
+                } : null,
+                Status = todo.Status
             });
             return ApiResponse<IEnumerable<GetTodoResponse>>.SuccessResponse(rs, "Get todos successfully");
         }
@@ -199,6 +208,7 @@ namespace MSP.Application.Services.Implementations.Todos
                 todo.EndDate = request.EndDate.Value;
 
             todo.UpdatedAt = DateTime.UtcNow;
+            todo.Status = Shared.Enums.TodoStatus.UnderReview;
 
             await _todoRepository.UpdateAsync(todo);
             await _todoRepository.SaveChangesAsync();
@@ -221,7 +231,8 @@ namespace MSP.Application.Services.Implementations.Todos
                     FullName = todo.User.FullName,
                     Email = todo.User.Email,
                     AvatarUrl = todo.User.AvatarUrl
-                } : null
+                } : null,
+                Status = Shared.Enums.TodoStatus.UnderReview
             };
 
             return ApiResponse<GetTodoResponse>.SuccessResponse(rs, "Update todo successfully");

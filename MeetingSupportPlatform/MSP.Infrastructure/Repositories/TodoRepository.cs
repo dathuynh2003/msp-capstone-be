@@ -14,7 +14,7 @@ namespace MSP.Infrastructure.Repositories
     {
         public async Task<IEnumerable<Todo>> GetTodoByMeetingId(Guid meetingId)
         {
-            var todos = await _context.Todos.Where(t => t.MeetingId == meetingId && t.IsDeleted != true)
+            var todos = await _context.Todos.Where(t => t.MeetingId == meetingId && t.IsDeleted != true &&  t.Status != Shared.Enums.TodoStatus.Deleted)
                 .Include(t => t.User)
                 .ToListAsync();
             return todos;

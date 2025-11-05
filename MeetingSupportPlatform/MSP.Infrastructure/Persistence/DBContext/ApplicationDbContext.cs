@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
+using MSP.Shared.Enums;
 
 namespace MSP.Infrastructure.Persistence.DBContext
 {
@@ -227,6 +228,9 @@ namespace MSP.Infrastructure.Persistence.DBContext
                     .WithMany()
                     .HasForeignKey(t => t.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                //Global Query Filter - Tự động loại trừ deleted todos
+                entity.HasQueryFilter(t => t.Status != TodoStatus.Deleted);
             });
 
             // OrganizationInvitation
