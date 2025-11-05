@@ -1,4 +1,5 @@
 ﻿using MSP.Domain.Base;
+using MSP.Shared.Enums;
 
 namespace MSP.Domain.Entities
 {
@@ -14,6 +15,7 @@ namespace MSP.Domain.Entities
         public string? Description { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public TodoStatus Status { get; set; } = TodoStatus.Generated;
 
         public virtual ICollection<ProjectTask> ProjectTasks { get; set; } = new List<ProjectTask>();
 
