@@ -157,7 +157,7 @@ namespace MSP.Application.Services.Implementations.TaskReassignRequest
                     PhoneNumber = toUser.PhoneNumber
                 },
             };
-            return ApiResponse<GetTaskReassignRequestResponse>.SuccessResponse(rs, "Chấp nhận yêu cầu chuyển giao công việc thành công");
+            return ApiResponse<GetTaskReassignRequestResponse>.SuccessResponse(rs, "Đã gửi yêu cầu chuyển giao công việc thành công");
         }
 
         public async Task<ApiResponse<IEnumerable<GetUserResponse>>> GetAvailableUsersForReassignmentAsync(Guid taskId, Guid fromUserId)
