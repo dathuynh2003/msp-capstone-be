@@ -42,5 +42,12 @@ namespace MSP.Infrastructure.Repositories
                 !(t.EndDate <= startDate || t.StartDate >= endDate)
             );
         }
+
+        public async Task<IEnumerable<ProjectTask>> GetTasksByIdsAsync(List<Guid> id)
+        {
+            return await _context.ProjectTasks
+                .Where(pt => id.Contains(pt.Id) && !pt.IsDeleted)
+                .ToListAsync();
+        }
     }
 }

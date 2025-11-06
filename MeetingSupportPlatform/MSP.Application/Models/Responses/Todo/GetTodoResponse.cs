@@ -29,6 +29,8 @@ namespace MSP.Application.Models.Responses.Todo
             TodoStatus.ConvertedToTask => "ConvertedToTask",
             _ => "Không xác định"
         };
+
+        public List<Guid> ReferencedTasks { get; set; } = new List<Guid>();
     }
 
 

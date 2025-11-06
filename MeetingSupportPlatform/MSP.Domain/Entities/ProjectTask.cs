@@ -22,6 +22,8 @@ namespace MSP.Domain.Entities
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
         public virtual ICollection<Milestone> Milestones { get; set; } = new List<Milestone>();
         public virtual ICollection<TaskReassignRequest> TaskReassignRequests { get; set; }
-    
+
+        // Navigation: Những todo mới reference task này (Many-to-Many)
+        public virtual ICollection<Todo> ReferencingTodos { get; set; } = new List<Todo>();
     }
 }

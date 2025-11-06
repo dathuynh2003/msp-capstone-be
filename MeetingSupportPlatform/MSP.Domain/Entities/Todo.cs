@@ -19,5 +19,8 @@ namespace MSP.Domain.Entities
 
         public virtual ICollection<ProjectTask> ProjectTasks { get; set; } = new List<ProjectTask>();
 
+        // Reference: Todo liên quan đến task cũ (Many-to-Many)
+        public virtual ICollection<ProjectTask> ReferencedTasks { get; set; } = new List<ProjectTask>();
+
     }
 }

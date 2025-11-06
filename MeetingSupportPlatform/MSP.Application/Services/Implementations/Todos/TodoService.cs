@@ -110,9 +110,22 @@ namespace MSP.Application.Services.Implementations.Todos
             var user = await _userManager.FindByIdAsync(request.AssigneeId.ToString());
             if (user == null)
                 return ApiResponse<GetTodoResponse>.ErrorResponse(null, "User not found");
+
             var meeting = await _meetingRepository.GetMeetingByIdAsync(request.MeetingId);
             if (meeting == null)
                 return ApiResponse<GetTodoResponse>.ErrorResponse(null, "Meeting not found");
+
+            // Validate referenced tasks if any
+            IEnumerable<Domain.Entities.ProjectTask> referencedTasks = Enumerable.Empty<Domain.Entities.ProjectTask>();
+            if (request.ReferenceTaskIds.Any())
+            {
+                referencedTasks = await _projectTaskRepository
+                    .GetTasksByIdsAsync(request.ReferenceTaskIds);
+
+                if (referencedTasks.Count() != request.ReferenceTaskIds.Count)
+                    return ApiResponse<GetTodoResponse>.ErrorResponse(null, "Some referenced tasks not found");
+            }
+
             var todo = new Todo
             {
 
@@ -123,9 +136,17 @@ namespace MSP.Application.Services.Implementations.Todos
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
                 Status = Shared.Enums.TodoStatus.Generated
             };
+            // Add referenced tasks
+            if (referencedTasks.Any())
+            {
+                foreach (var task in referencedTasks)
+                {
+                    todo.ReferencedTasks.Add(task);
+                }
+            }
+
             await _todoRepository.AddAsync(todo);
             await _todoRepository.SaveChangesAsync();
             var rs = new GetTodoResponse
@@ -139,7 +160,10 @@ namespace MSP.Application.Services.Implementations.Todos
                 EndDate = todo.EndDate,
                 CreatedAt = todo.CreatedAt,
                 UpdatedAt = todo.UpdatedAt,
-                Status = Shared.Enums.TodoStatus.Generated
+                Status = Shared.Enums.TodoStatus.Generated,
+                ReferencedTasks = referencedTasks
+                .Select(t => t.Id)
+                .ToList()
             };
             return ApiResponse<GetTodoResponse>.SuccessResponse(rs, "Create todo successfully");
         }

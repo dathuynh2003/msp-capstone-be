@@ -15,5 +15,7 @@ namespace MSP.Application.Models.Requests.Todo
         public string? Description { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+
+        public List<Guid> ReferenceTaskIds { get; set; } = new List<Guid>();
     }
 }

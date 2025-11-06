@@ -229,6 +229,9 @@ namespace MSP.Infrastructure.Persistence.DBContext
                     .HasForeignKey(t => t.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasMany(t => t.ReferencedTasks)
+                    .WithMany(t => t.ReferencingTodos);
+
                 //Global Query Filter - Tự động loại trừ deleted todos
                 entity.HasQueryFilter(t => t.Status != TodoStatus.Deleted);
             });
