@@ -27,7 +27,7 @@ namespace AuthService.Infrastructure.Repositories
         public async Task<IEnumerable<User>> GetBusinessOwnersAsync()
         {
             return await _context.Users
-                .Where(u => _context.UserRoles
+                .Where(u => u.EmailConfirmed && _context.UserRoles
                     .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
                     .Any(ur => ur.UserId == u.Id && ur.Name == UserRoleEnum.BusinessOwner.ToString()))
                 .ToListAsync();
@@ -36,7 +36,7 @@ namespace AuthService.Infrastructure.Repositories
         public async Task<IEnumerable<User>> GetPendingBusinessOwnersAsync()
         {
             return await _context.Users
-                .Where(u => !u.IsApproved && _context.UserRoles
+                .Where(u => !u.IsApproved && u.EmailConfirmed && _context.UserRoles
                     .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
                     .Any(ur => ur.UserId == u.Id && ur.Name == UserRoleEnum.BusinessOwner.ToString()))
                 .ToListAsync();
