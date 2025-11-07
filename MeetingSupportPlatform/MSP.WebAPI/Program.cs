@@ -13,7 +13,6 @@ builder.Services.AddInfrastuctureService(builder.Configuration);
 builder.Services.AddApplicationService(builder.Configuration);
 builder.Services.AddAuthorization();
 
-
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -55,15 +54,6 @@ builder.Services.AddHttpClient();
 builder.Services.AddHangfire(config =>
     config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DbConnectionString")));
 builder.Services.AddHangfireServer();
-
-
-
-
-
-
-
-// Google Authentication đã được cấu hình trong AuthenticationExtension
-
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -107,5 +97,9 @@ app.UseCors("AllowWeb");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHangfireDashboard();
+
+// Configure Hangfire Recurring Jobs
+app.UseHangfireJobs();
+
 app.MapControllers();
 app.Run();

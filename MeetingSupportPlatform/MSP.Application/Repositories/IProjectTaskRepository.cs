@@ -11,5 +11,6 @@ namespace MSP.Application.Repositories
         Task<bool> HasTaskOverlapAsync(Guid userId, Guid projectId, Guid excludeTaskId, DateTime startDate, DateTime endDate);
         Task<IEnumerable<ProjectTask>> GetTasksByIdsAsync(List<Guid> id);
         Task<IEnumerable<ProjectTask>> GetTasksByTodoIdAsync(Guid todoId);
+        Task<IEnumerable<ProjectTask>> GetOverdueTasksAsync(DateTime currentTime, string overDueStatus, string completedStatus);
     }
 }

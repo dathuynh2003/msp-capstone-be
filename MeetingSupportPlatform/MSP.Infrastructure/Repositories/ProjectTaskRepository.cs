@@ -56,6 +56,17 @@ namespace MSP.Infrastructure.Repositories
                 .Where(pt => pt.ReferencingTodos.Any(t => t.Id == todoId) && !pt.IsDeleted)
                 .Include(pt => pt.User)
                 .Include(pt => pt.Milestones)
+                 .ToListAsync();
+        }
+        public async Task<IEnumerable<ProjectTask>> GetOverdueTasksAsync(DateTime currentTime, string overDueStatus, string completedStatus)
+        {
+            return await _context.ProjectTasks
+                .Where(task =>
+                    !task.IsDeleted &&
+                    task.EndDate.HasValue &&
+                    task.EndDate.Value < currentTime &&
+                    task.Status != overDueStatus &&
+                    task.Status != completedStatus)
                 .ToListAsync();
         }
     }
