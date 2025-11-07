@@ -16,11 +16,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\MSP.Application\MSP.Application.csproj" />
-    <ProjectReference Include="..\MSP.Infrastructure\MSP.Infrastructure.csproj" />
+	<ProjectReference Include="..\MSP.Application\MSP.Application.csproj" />
+	<ProjectReference Include="..\MSP.Infrastructure\MSP.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

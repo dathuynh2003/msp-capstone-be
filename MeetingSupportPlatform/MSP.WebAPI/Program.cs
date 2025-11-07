@@ -52,7 +52,11 @@ builder.Services.AddHttpClient();
 
 // Add Hangfire
 builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DbConnectionString")));
+    config.UsePostgreSqlStorage(options =>
+    {
+        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DbConnectionString"));
+    }));
+
 builder.Services.AddHangfireServer();
 
 // Add CORS

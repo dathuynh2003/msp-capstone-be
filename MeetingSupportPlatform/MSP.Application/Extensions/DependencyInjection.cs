@@ -57,7 +57,6 @@ namespace MSP.Application.Extensions
 
             // Đăng ký StreamService với DI
             services.AddScoped<IStreamService, StreamService>();
-
             return services;
         }
     }

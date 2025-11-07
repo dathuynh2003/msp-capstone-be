@@ -1,0 +1,13 @@
+.git
+.gitignore
+.vs
+.vscode
+bin
+obj
+*.user
+*.suo
+*.cache
+node_modules
+.env
+.env.local
+.env.*.local
