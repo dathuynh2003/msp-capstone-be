@@ -40,7 +40,12 @@ namespace MSP.Application.Extensions
             services.AddScoped<IMeetingService, MeetingService>();
             services.AddScoped<ITodoService, TodoService>();
             services.AddScoped<ITaskReassignRequestService, TaskReassignRequestService>();
+            
+            // Register Background Services (Cron Jobs) - chỉ giữ MeetingCronJobService
             services.AddHostedService<MeetingCronJobService>();
+            
+            // Register Hangfire Job Services
+            services.AddScoped<TaskStatusCronJobService>();
 
 
             // Đăng ký StreamSettings từ appsettings.json

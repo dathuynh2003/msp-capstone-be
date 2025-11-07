@@ -42,5 +42,17 @@ namespace MSP.Infrastructure.Repositories
                 !(t.EndDate <= startDate || t.StartDate >= endDate)
             );
         }
+
+        public async Task<IEnumerable<ProjectTask>> GetOverdueTasksAsync(DateTime currentTime, string overDueStatus, string completedStatus)
+        {
+            return await _context.ProjectTasks
+                .Where(task =>
+                    !task.IsDeleted &&
+                    task.EndDate.HasValue &&
+                    task.EndDate.Value < currentTime &&
+                    task.Status != overDueStatus &&
+                    task.Status != completedStatus)
+                .ToListAsync();
+        }
     }
 }
