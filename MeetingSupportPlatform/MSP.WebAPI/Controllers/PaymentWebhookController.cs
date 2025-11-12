@@ -69,7 +69,7 @@ namespace MSP.WebAPI.Controllers
         /// Đăng ký webhook URL với PayOS
         /// Chỉ cần gọi 1 lần khi setup
         /// </summary>
-        [HttpPost("/confirm-webhook")]
+        [HttpPost("confirm")]
         public async Task<IActionResult> ConfirmWebhook([FromBody] ConfirmWebhookRequest request)
         {
 
