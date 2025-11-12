@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MSP.Application.Services.Implementations.Auth;
+using MSP.Application.Services.Implementations.Limitation;
 using MSP.Application.Services.Implementations.Meeting;
 using MSP.Application.Services.Implementations.Milestone;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
@@ -15,6 +16,7 @@ using MSP.Application.Services.Implementations.TaskHistory;
 using MSP.Application.Services.Implementations.Todos;
 using MSP.Application.Services.Implementations.Users;
 using MSP.Application.Services.Interfaces.Auth;
+using MSP.Application.Services.Interfaces.Limitation;
 using MSP.Application.Services.Interfaces.Meeting;
 using MSP.Application.Services.Interfaces.Milestone;
 using MSP.Application.Services.Interfaces.Notification;
@@ -51,6 +53,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<IPackageService, PackageService>();
             services.AddScoped<IPaymentService, PayOSService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<ILimitationService, LimitationService>();
             // Register Background Services (Cron Jobs) - chỉ giữ MeetingCronJobService
             services.AddHostedService<MeetingCronJobService>();
             
