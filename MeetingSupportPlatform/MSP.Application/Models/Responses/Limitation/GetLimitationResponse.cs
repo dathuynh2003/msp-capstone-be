@@ -14,5 +14,7 @@ namespace MSP.Application.Models.Responses.Limitation
         public bool IsUnlimited { get; set; }
         public int? LimitValue { get; set; }
         public string? LimitUnit { get; set; }
+        public bool IsDeleted { get; set; }
+
     }
 }
