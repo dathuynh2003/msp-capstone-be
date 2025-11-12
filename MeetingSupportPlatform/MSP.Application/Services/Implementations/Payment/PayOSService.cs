@@ -125,7 +125,7 @@ namespace MSP.Application.Services.Implementations.Payment
             if (code == "00")
             {
                 subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
-                subscription.PaidAt = DateTime.Parse(transactionDateTime);
+                subscription.PaidAt = DateTime.Parse(transactionDateTime, null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
                 subscription.PaymentMethod = "PayOS";
                 subscription.TransactionID = reference;
                 subscription.StartDate = DateTime.UtcNow;
