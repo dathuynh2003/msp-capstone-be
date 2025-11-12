@@ -91,5 +91,11 @@ namespace MSP.WebAPI.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        [HttpPost("confirm-test")]
+        public IActionResult TestWebhook()
+        {
+            return Ok(new { success = true });
+        }
     }
 }
