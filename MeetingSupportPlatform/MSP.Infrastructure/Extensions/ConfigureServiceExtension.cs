@@ -18,6 +18,7 @@ namespace MSP.Infrastructure.Extensions
             // Configure Email Settings
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
 
+
             // Register Processors
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
             services.AddScoped<IAuthTokenProcessor, AuthTokenProcessor>();
@@ -31,6 +32,8 @@ namespace MSP.Infrastructure.Extensions
             services.AddScoped<IMeetingRepository, MeetingRepository>();
             services.AddScoped<ITodoRepository, TodoRepository>();
             services.AddScoped<ITaskHistoryRepository, TaskHistoryRepository>();
+            services.AddScoped<IPackageRepository, PackageRepository>();
+            services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();  
             // Register Services
             services.AddScoped<IEmailSender, EmailSender>();
 

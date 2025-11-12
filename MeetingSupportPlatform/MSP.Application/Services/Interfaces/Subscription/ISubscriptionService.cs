@@ -1,0 +1,16 @@
+﻿using MSP.Application.Models.Requests.Subscription;
+using MSP.Application.Models.Responses.Subscription;
+using MSP.Shared.Common;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace MSP.Application.Services.Interfaces.Subscription
+{
+    public interface ISubscriptionService
+    {
+        Task<ApiResponse<GetSubscriptionResponse>> CreateSubscriptionAsync(CreateSubscriptionRequest request);
+    }
+}
