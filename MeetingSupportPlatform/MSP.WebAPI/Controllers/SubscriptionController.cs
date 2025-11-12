@@ -5,7 +5,7 @@ using MSP.Application.Services.Interfaces.Subscription;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class SubscriptionController : ControllerBase
     {

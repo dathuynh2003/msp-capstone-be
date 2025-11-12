@@ -8,7 +8,7 @@ using PayOS.Models.Webhooks;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("api/payment")]
+    [Route("api/v1/payment")]
     [ApiController]
     public class PaymentWebhookController : ControllerBase
     {
