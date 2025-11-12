@@ -1,26 +1,34 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MSP.Application.Services.Interfaces.Auth;
+using Microsoft.Extensions.Options;
 using MSP.Application.Services.Implementations.Auth;
-using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Implementations.Meeting;
-using MSP.Application.Services.Interfaces.Meeting;
-using MSP.Application.Services.Implementations.Summarize;
-using MSP.Application.Services.Interfaces.Summarize;
-using MSP.Application.Services.Interfaces.Project;
-using MSP.Application.Services.Implementations.Project;
-using MSP.Application.Services.Interfaces.Milestone;
 using MSP.Application.Services.Implementations.Milestone;
-using MSP.Application.Services.Interfaces.ProjectTask;
-using MSP.Application.Services.Implementations.ProjectTask;
-using MSP.Application.Services.Interfaces.Users;
-using MSP.Application.Services.Implementations.Users;
-using MSP.Application.Services.Interfaces.Todos;
-using MSP.Application.Services.Implementations.Todos;
-using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
-using MSP.Application.Services.Interfaces.TaskHistory;
+using MSP.Application.Services.Implementations.Package;
+using MSP.Application.Services.Implementations.Payment;
+using MSP.Application.Services.Implementations.Project;
+using MSP.Application.Services.Implementations.ProjectTask;
+using MSP.Application.Services.Implementations.SubscriptionService;
+using MSP.Application.Services.Implementations.Summarize;
 using MSP.Application.Services.Implementations.TaskHistory;
+using MSP.Application.Services.Implementations.Todos;
+using MSP.Application.Services.Implementations.Users;
+using MSP.Application.Services.Interfaces.Auth;
+using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Services.Interfaces.Milestone;
+using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Interfaces.OrganizationInvitation;
+using MSP.Application.Services.Interfaces.Package;
+using MSP.Application.Services.Interfaces.Payment;
+using MSP.Application.Services.Interfaces.Project;
+using MSP.Application.Services.Interfaces.ProjectTask;
+using MSP.Application.Services.Interfaces.Subscription;
+using MSP.Application.Services.Interfaces.Summarize;
+using MSP.Application.Services.Interfaces.TaskHistory;
+using MSP.Application.Services.Interfaces.Todos;
+using MSP.Application.Services.Interfaces.Users;
+using PayOS;
 
 namespace MSP.Application.Extensions
 {
@@ -40,7 +48,9 @@ namespace MSP.Application.Extensions
             services.AddScoped<IMeetingService, MeetingService>();
             services.AddScoped<ITodoService, TodoService>();
             services.AddScoped<ITaskHistoryService, TaskHistoryService>();
-            
+            services.AddScoped<IPackageService, PackageService>();
+            services.AddScoped<IPaymentService, PayOSService>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
             // Register Background Services (Cron Jobs) - chỉ giữ MeetingCronJobService
             services.AddHostedService<MeetingCronJobService>();
             
@@ -51,6 +61,14 @@ namespace MSP.Application.Extensions
             // Đăng ký StreamSettings từ appsettings.json
             services.Configure<StreamSettings>(
                 configuration.GetSection("Stream"));
+
+            //Configure PayOS Settings
+            services.Configure<PayOSConfiguration>(configuration.GetSection("PayOS"));
+            services.AddSingleton<PayOSClient>(sp =>
+            {
+                var config = sp.GetRequiredService<IOptions<PayOSConfiguration>>().Value;
+                return new PayOSClient(config.ClientId, config.ApiKey, config.ChecksumKey);
+            });
 
             // Đăng ký HttpClientFactory
             services.AddHttpClient();
