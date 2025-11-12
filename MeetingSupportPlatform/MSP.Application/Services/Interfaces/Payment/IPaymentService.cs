@@ -13,9 +13,8 @@ namespace MSP.Application.Services.Interfaces.Payment
     public interface IPaymentService
     {
         Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentRequest request);
-        Task<bool> HandlePaymentWebhookAsync(PaymentWebhookData webhookData);
-        Task<PaymentStatusResponse> GetPaymentStatusAsync(long orderCode, CancellationToken cancellationToken = default);
-        bool VerifyPayOSWebhook(WebhookRequest request);
+        Task<bool> HandlePaymentWebhookAsync(JsonElement payload);
+        bool VerifyPayOSWebhook(JsonElement payload);
         Task<bool> ConfirmWebhookAsync(string webhookUrl);
     }
 }
