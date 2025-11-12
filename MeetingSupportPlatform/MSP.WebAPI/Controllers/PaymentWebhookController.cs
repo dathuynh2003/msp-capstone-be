@@ -4,12 +4,11 @@ using MSP.Application.Models.Responses.Payment;
 using MSP.Application.Services.Interfaces.Payment;
 using PayOS;
 using PayOS.Exceptions;
-using PayOS.Models.Webhooks;
 using System.Text.Json;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("api/v1/payment")]
+    [Route("webhook-url")]
     [ApiController]
     public class PaymentWebhookController : ControllerBase
     {
@@ -26,7 +25,7 @@ namespace MSP.WebAPI.Controllers
         /// <summary>
         /// Webhook endpoint - PayOS gọi vào đây khi thanh toán hoàn tất
         /// </summary>
-        [HttpPost("webhook")]
+        [HttpPost]
         public async Task<IActionResult> HandleWebhook([FromBody] JsonElement payload)
         {
 
@@ -70,14 +69,14 @@ namespace MSP.WebAPI.Controllers
         /// Đăng ký webhook URL với PayOS
         /// Chỉ cần gọi 1 lần khi setup
         /// </summary>
-        [HttpPost("webhook/confirm")]
-        public async Task<IActionResult> ConfirmWebhook([FromQuery] string webhookUrl)
+        [HttpPost("/confirm-webhook")]
+        public async Task<IActionResult> ConfirmWebhook([FromBody] ConfirmWebhookRequest request)
         {
 
             try
             {
                 //var result = await _payOSClient.Webhooks.ConfirmAsync(webhookUrl);
-                var result = await _paymentService.ConfirmWebhookAsync(webhookUrl);
+                var result = await _paymentService.ConfirmWebhookAsync(request.WebhookUrl);
 
                 _logger.LogInformation("Webhook confirmed successfully: {@Result}", result);
                 if(result == false)
@@ -88,7 +87,7 @@ namespace MSP.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while confirming webhook URL: {WebhookUrl}", webhookUrl);
+                _logger.LogError(ex, "Error while confirming webhook URL: {WebhookUrl}", request.WebhookUrl);
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }

@@ -13,6 +13,7 @@ using PayOS.Models.V2.PaymentRequests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -174,17 +175,20 @@ namespace MSP.Application.Services.Implementations.Payment
             return generatedSignature == providedSignature;
         }
 
+
         public async Task<bool> ConfirmWebhookAsync(string webhookUrl)
         {
             try
             {
                 var payload = new { webhookUrl = webhookUrl };
                 var json = JsonSerializer.Serialize(payload);
+                Console.WriteLine($"Confirming webhook with payload: {json}");
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
                 using var client = new HttpClient();
                 client.DefaultRequestHeaders.Add("x-client-id", ClientId);
                 client.DefaultRequestHeaders.Add("x-api-key", ApiKey);
-                client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
                 var res = await client.PostAsync($"{BaseUrl}/confirm-webhook", content);
                 var responseBody = await res.Content.ReadAsStringAsync();
                 Console.WriteLine($"PayOS response: {responseBody}");
