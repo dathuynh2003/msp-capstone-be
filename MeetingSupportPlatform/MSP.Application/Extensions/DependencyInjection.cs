@@ -21,8 +21,6 @@ using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
 using MSP.Application.Services.Interfaces.TaskHistory;
 using MSP.Application.Services.Implementations.TaskHistory;
-using MSP.Application.Services.Interfaces.Limitation;
-using MSP.Application.Services.Implementations.Limitation;
 
 namespace MSP.Application.Extensions
 {
@@ -42,8 +40,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<IMeetingService, MeetingService>();
             services.AddScoped<ITodoService, TodoService>();
             services.AddScoped<ITaskHistoryService, TaskHistoryService>();
-            services.AddScoped<ILimitationService, LimitationService>();
-
+            
             // Register Background Services (Cron Jobs) - chỉ giữ MeetingCronJobService
             services.AddHostedService<MeetingCronJobService>();
             
