@@ -25,7 +25,7 @@ namespace MSP.WebAPI.Controllers
         /// <summary>
         /// Webhook endpoint - PayOS gọi vào đây khi thanh toán hoàn tất
         /// </summary>
-        [HttpPost("webhook")]
+        [HttpPost("confirm-test")]
         public async Task<IActionResult> HandleWebhook([FromBody] JsonElement payload)
         {
 
@@ -92,7 +92,7 @@ namespace MSP.WebAPI.Controllers
             }
         }
 
-        [HttpPost("confirm-test")]
+        [HttpPost("webhook")]
         public IActionResult TestWebhook()
         {
             return Ok(new { success = true });
