@@ -8,7 +8,7 @@ namespace MSP.Domain.Entities
         public string? Description { get; set; }
         public decimal Price { get; set; }
         public string Currency { get; set; }
-        public string BillingCycle { get; set; }
+        public int BillingCycle { get; set; }
         public Guid CreatedById { get; set; }
         public virtual User CreatedBy { get; set; }
 

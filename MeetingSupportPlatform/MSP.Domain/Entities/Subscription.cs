@@ -9,8 +9,8 @@ namespace MSP.Domain.Entities
         public decimal TotalPrice { get; set; }
         public string Status { get; set; }
         public DateTime? PaidAt { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
 
         public Guid PackageId { get; set; }
         public virtual Package Package { get; set; }
