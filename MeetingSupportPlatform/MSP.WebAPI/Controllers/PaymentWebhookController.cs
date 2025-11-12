@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("webhook-url")]
+    [Route("api/v1/payments")]
     [ApiController]
     public class PaymentWebhookController : ControllerBase
     {
@@ -25,7 +25,7 @@ namespace MSP.WebAPI.Controllers
         /// <summary>
         /// Webhook endpoint - PayOS gọi vào đây khi thanh toán hoàn tất
         /// </summary>
-        [HttpPost]
+        [HttpPost("webhook")]
         public async Task<IActionResult> HandleWebhook([FromBody] JsonElement payload)
         {
 
