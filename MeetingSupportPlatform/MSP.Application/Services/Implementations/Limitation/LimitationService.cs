@@ -106,7 +106,8 @@ namespace MSP.Application.Services.Implementations.Limitation
                 Description = limitation.Description,
                 IsUnlimited = limitation.IsUnlimited,
                 LimitValue = limitation.LimitValue,
-                LimitUnit = limitation.LimitUnit
+                LimitUnit = limitation.LimitUnit,
+                IsDeleted = limitation.IsDeleted,
             };
 
             return ApiResponse<GetLimitationResponse>.SuccessResponse(response);
@@ -116,7 +117,7 @@ namespace MSP.Application.Services.Implementations.Limitation
         {
             try
             {
-                var limitations = await _limitationRepository.GetAllAsync();
+                var limitations = await _limitationRepository.GetAll();
                 var response = limitations.Select(l => new GetLimitationResponse
                 {
                     Id = l.Id,
@@ -124,7 +125,8 @@ namespace MSP.Application.Services.Implementations.Limitation
                     Description = l.Description,
                     IsUnlimited = l.IsUnlimited,
                     LimitValue = l.LimitValue,
-                    LimitUnit = l.LimitUnit
+                    LimitUnit = l.LimitUnit,
+                    IsDeleted = l.IsDeleted,
                 }).ToList();
 
                 return ApiResponse<List<GetLimitationResponse>>.SuccessResponse(response);

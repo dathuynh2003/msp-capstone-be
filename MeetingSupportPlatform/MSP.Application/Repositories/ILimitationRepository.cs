@@ -11,5 +11,7 @@ namespace MSP.Application.Repositories
     public interface ILimitationRepository: IGenericRepository<Limitation, Guid>
     {
         Task<Limitation?> GetLimitationByIdAsync(Guid id);
+        Task<List<Limitation>> GetAll();
+
     }
 }
