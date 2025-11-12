@@ -5,6 +5,7 @@ using MSP.Application.Models.Responses.Payment;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Payment;
 using MSP.Shared.Common;
+using MSP.Shared.Enums;
 using PayOS;
 using PayOS.Exceptions;
 using PayOS.Models;
@@ -104,24 +105,28 @@ namespace MSP.Application.Services.Implementations.Payment
 
         }
 
-        public Task<PaymentStatusResponse> GetPaymentStatusAsync(long orderCode, CancellationToken cancellationToken = default)
+        public async Task<bool> HandlePaymentWebhookAsync(JsonElement payload)
         {
-            throw new NotImplementedException();
-        }
-
-        public async Task<bool> HandlePaymentWebhookAsync(PaymentWebhookData webhookData)
-        {
-            var subscription = await _subscriptionRepository.GetByOrderCodeAsync(webhookData.OrderCode);
+            var data = payload.GetProperty("data");
+            var orderCode = data.GetProperty("orderCode").GetInt32();
+            var amount = data.GetProperty("amount").GetInt32();
+            var code = data.GetProperty("code").GetString();
+            var desc = data.GetProperty("desc").GetString();
+            var reference = data.GetProperty("reference").GetString();
+            var transactionDateTime = data.GetProperty("transactionDateTime").GetString();
+            var subscription = await _subscriptionRepository.GetByOrderCodeAsync(orderCode);
 
             if (subscription == null)
                 return false;
 
-            subscription.Status = webhookData.Status.ToUpper();
-            if (subscription.Status == "PAID")
+            if (subscription.Status == PaymentEnum.Paid.ToString().ToUpper() || subscription.Status == PaymentEnum.Cancelled.ToString().ToUpper())
+                return true; // Đã xử lý rồi
+            if (code == "00")
             {
-                subscription.PaidAt = DateTime.Parse(webhookData.TransactionDateTime);
+                subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
+                subscription.PaidAt = DateTime.Parse(transactionDateTime);
                 subscription.PaymentMethod = "PayOS";
-                subscription.TransactionID = webhookData.Reference;
+                subscription.TransactionID = reference;
                 subscription.StartDate = DateTime.UtcNow;
                 subscription.EndDate = subscription.StartDate.Value.AddMonths(subscription.Package.BillingCycle);
             }
@@ -143,37 +148,30 @@ namespace MSP.Application.Services.Implementations.Payment
         }
 
 
-        public bool VerifyPayOSWebhook(WebhookRequest request)
+        public bool VerifyPayOSWebhook(JsonElement payload)
         {
-            if (request == null || request.Data == null)
-                return false;
+            var data = payload.GetProperty("data");
 
-            // Duyệt qua tất cả các thuộc tính trong WebhookPaymentData để tạo rawData
-            var dict = new SortedDictionary<string, string>(
-                typeof(WebhookPaymentData)
-                    .GetProperties()
-                    .ToDictionary(
-                        p => char.ToLowerInvariant(p.Name[0]) + p.Name[1..], // đổi thành camelCase như PayOS
-                        p => p.GetValue(request.Data)?.ToString() ?? ""
-                    )
-            );
-            // Build raw data string (key1=value1&key2=value2&...)
+            // Tạo dictionary chứa tất cả các key-value trong "data"
+            var dict = new SortedDictionary<string, string>();
+            foreach (var prop in data.EnumerateObject())
+            {
+                dict[prop.Name] = prop.Value.GetRawText().Trim('"');
+            }
+
+            // Build raw data string: key1=value1&key2=value2&...
             var rawBuilder = new StringBuilder();
             foreach (var kvp in dict)
             {
                 rawBuilder.Append($"{kvp.Key}={kvp.Value}&");
             }
-
-            if (rawBuilder.Length > 0)
-                rawBuilder.Length--; // Xóa dấu '&' cuối cùng
+            rawBuilder.Length--; // Bỏ dấu '&' cuối cùng
 
             var rawData = rawBuilder.ToString();
-
-            // Tạo chữ ký từ rawData
             var generatedSignature = GenerateSignature(rawData);
+            var providedSignature = payload.GetProperty("signature").GetString();
 
-            // So sánh với chữ ký được gửi từ PayOS
-            return generatedSignature == request.Signature;
+            return generatedSignature == providedSignature;
         }
 
         public async Task<bool> ConfirmWebhookAsync(string webhookUrl)
