@@ -39,11 +39,10 @@ namespace MSP.Application.Services.Implementations.Payment
             _options = options.Value;
             _subscriptionRepository = subscriptionRepository;
         }
-        public string ClientId => _options.ClientId;
-        public string ApiKey => _options.ApiKey;
-        public string ChecksumKey => _options.ChecksumKey;
-        public string BaseUrl => _options.BaseUrl;
-
+        private string ClientId => _options.ClientId;
+        private string ApiKey => _options.ApiKey;
+        private string ChecksumKey => _options.ChecksumKey;
+        private string BaseUrl => _options.BaseUrl;
         public async Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentRequest request)
         {
             
@@ -69,7 +68,7 @@ namespace MSP.Application.Services.Implementations.Payment
                 client.DefaultRequestHeaders.Add("x-client-id", ClientId);
                 client.DefaultRequestHeaders.Add("x-api-key", ApiKey);
 
-                var res = await client.PostAsync($"{BaseUrl}/payment-requests", content);
+                var res = await client.PostAsync($"{BaseUrl}/v2/payment-requests", content);
                 res.EnsureSuccessStatusCode(); // ném HttpRequestException nếu lỗi HTTP
 
                 var responseJson = await res.Content.ReadAsStringAsync();
@@ -110,7 +109,7 @@ namespace MSP.Application.Services.Implementations.Payment
             throw new NotImplementedException();
         }
 
-        public async Task<bool> HandlePaymentWebhookAsync(PaymentWebhookData webhookData, CancellationToken cancellationToken = default)
+        public async Task<bool> HandlePaymentWebhookAsync(PaymentWebhookData webhookData)
         {
             var subscription = await _subscriptionRepository.GetByOrderCodeAsync(webhookData.OrderCode);
 
@@ -143,14 +142,63 @@ namespace MSP.Application.Services.Implementations.Payment
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
 
-        public bool VerifyBankWebhook(JsonElement payload)
-        {
-            throw new NotImplementedException();
-        }
 
         public bool VerifyPayOSWebhook(WebhookRequest request)
         {
-            throw new NotImplementedException();
+            if (request == null || request.Data == null)
+                return false;
+
+            // Duyệt qua tất cả các thuộc tính trong WebhookPaymentData để tạo rawData
+            var dict = new SortedDictionary<string, string>(
+                typeof(WebhookPaymentData)
+                    .GetProperties()
+                    .ToDictionary(
+                        p => char.ToLowerInvariant(p.Name[0]) + p.Name[1..], // đổi thành camelCase như PayOS
+                        p => p.GetValue(request.Data)?.ToString() ?? ""
+                    )
+            );
+            // Build raw data string (key1=value1&key2=value2&...)
+            var rawBuilder = new StringBuilder();
+            foreach (var kvp in dict)
+            {
+                rawBuilder.Append($"{kvp.Key}={kvp.Value}&");
+            }
+
+            if (rawBuilder.Length > 0)
+                rawBuilder.Length--; // Xóa dấu '&' cuối cùng
+
+            var rawData = rawBuilder.ToString();
+
+            // Tạo chữ ký từ rawData
+            var generatedSignature = GenerateSignature(rawData);
+
+            // So sánh với chữ ký được gửi từ PayOS
+            return generatedSignature == request.Signature;
         }
+
+        public async Task<bool> ConfirmWebhookAsync(string webhookUrl)
+        {
+            try
+            {
+                var payload = new { webhookUrl = webhookUrl };
+                var json = JsonSerializer.Serialize(payload);
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("x-client-id", ClientId);
+                client.DefaultRequestHeaders.Add("x-api-key", ApiKey);
+                client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var res = await client.PostAsync($"{BaseUrl}/confirm-webhook", content);
+                var responseBody = await res.Content.ReadAsStringAsync();
+                Console.WriteLine($"PayOS response: {responseBody}");
+                return res.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while confirming webhook: {ex.Message}");
+                return false;
+            }
+        }
+
+
     }
 }

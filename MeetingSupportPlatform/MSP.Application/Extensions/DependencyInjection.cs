@@ -64,11 +64,6 @@ namespace MSP.Application.Extensions
 
             //Configure PayOS Settings
             services.Configure<PayOSConfiguration>(configuration.GetSection("PayOS"));
-            services.AddSingleton<PayOSClient>(sp =>
-            {
-                var config = sp.GetRequiredService<IOptions<PayOSConfiguration>>().Value;
-                return new PayOSClient(config.ClientId, config.ApiKey, config.ChecksumKey);
-            });
 
             // Đăng ký HttpClientFactory
             services.AddHttpClient();
