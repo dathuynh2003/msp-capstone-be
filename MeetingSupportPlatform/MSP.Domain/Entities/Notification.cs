@@ -15,6 +15,7 @@ namespace MSP.Domain.Entities
         public string? Type { get; set; } // Meeting, Task, Project, InApp, ...
         public string? EntityId { get; set; }
         public bool IsRead { get; set; } = false;
+        public DateTime? ReadAt { get; set; }
         public string? Data { get; set; } // JSON data for additional information
         public virtual User User { get; set; }
     }
