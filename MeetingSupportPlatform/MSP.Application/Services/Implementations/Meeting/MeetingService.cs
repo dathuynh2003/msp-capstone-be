@@ -222,5 +222,15 @@ namespace MSP.Application.Services.Implementations.Meeting
             await _meetingRepository.SaveChangesAsync();
             return ApiResponse<string>.SuccessResponse("updateSuccess", "Meeting transcription updated successfully");
         }
+
+        public async Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByUserIdAsync(Guid userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return ApiResponse<List<GetMeetingResponse>>.ErrorResponse(null, "User not found");
+            var meetings = await _meetingRepository.GetMeetingsByUserIdAsync(userId);
+            var response = meetings.Select(meeting => MapToMeetingResponse(meeting)).ToList();
+            return ApiResponse<List<GetMeetingResponse>>.SuccessResponse(response, "Meetings retrieved successfully");
+        }
     }
 }

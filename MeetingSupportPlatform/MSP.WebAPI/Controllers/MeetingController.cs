@@ -108,5 +108,12 @@ namespace MSP.WebAPI.Controllers
             var rs = await _meetingService.UpdateTranscriptAsync(meetingId, transcription);
             return Ok(rs);
         }
+
+        [HttpGet("by-user/{userId}")]
+        public async Task<IActionResult> GetMeetingsByUserId([FromRoute] Guid userId)
+        {
+            var rs = await _meetingService.GetMeetingsByUserIdAsync(userId);
+            return Ok(rs);
+        }
     }
 }

@@ -14,5 +14,6 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<Meeting>> GetMeetingByProjectIdAsync(Guid projectId);
         Task<bool> CancelMeetingAsync(Guid id);
         Task<IEnumerable<User>> GetAttendeesAsync(IEnumerable<Guid> attendeeIds);
+        Task<IEnumerable<Meeting>> GetMeetingsByUserIdAsync(Guid userId);
     }
 }

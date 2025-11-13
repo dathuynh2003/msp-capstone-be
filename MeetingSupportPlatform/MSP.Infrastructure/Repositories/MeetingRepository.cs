@@ -56,5 +56,17 @@ namespace MSP.Infrastructure.Repositories
             return true;
         }
 
+        public async Task<IEnumerable<Meeting>> GetMeetingsByUserIdAsync(Guid userId)
+        {
+            var meetings = await _context.Meetings
+                .Where(m => m.Attendees.Any(a => a.Id == userId) && m.IsDeleted == false)
+                .Include(m => m.Attendees)
+                .Include(m => m.CreatedBy)
+                .Include(m => m.Project)
+                .Include(m => m.Milestone)
+                .OrderByDescending(m => m.StartTime)
+                .ToListAsync();
+            return meetings;
+        }
     }
 }
