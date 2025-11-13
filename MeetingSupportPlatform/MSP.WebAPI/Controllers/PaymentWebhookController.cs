@@ -31,8 +31,10 @@ namespace MSP.WebAPI.Controllers
 
             try
             {
+                _logger.LogInformation("Received PayOS webhook: {@Payload}", payload);
                 // 1. Verify webhook với Webhooks.VerifyAsync()
                 var rs = _paymentService.VerifyPayOSWebhook(payload);
+                _logger.LogInformation("🔍 Webhook verification result: {Result}", rs);
                 if (!rs)
                 {
                     return BadRequest(new { error = "Invalid signature" });
