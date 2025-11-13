@@ -19,15 +19,18 @@ namespace MSP.Application.Extensions
         /// <returns>IApplicationBuilder for method chaining</returns>
         public static IApplicationBuilder UseHangfireJobs(this IApplicationBuilder app)
         {
+            // Get Vietnam timezone (UTC+7)
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
             // 1. Task Status Cron Job
             // Automatically check and update overdue tasks to OverDue status
             RecurringJob.AddOrUpdate<TaskStatusCronJobService>(
                 "update-overdue-tasks",
                 service => service.UpdateOverdueTasksAsync(),
-                "*/5 * * * *", // Run every 5 minutes
+                Cron.Daily(), // Run every day at 12:00 AM Vietnam time
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             // 2. Meeting Status Cron Job
@@ -37,10 +40,10 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<MeetingStatusCronJobService>(
                 "update-meeting-statuses",
                 service => service.UpdateMeetingStatusesAsync(),
-                "* * * * *", // Run every minute
+                "*/5 * * * *", // Run every 5 minutes
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             // 3. Project Status Cron Job
@@ -50,10 +53,10 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<ProjectStatusCronJobService>(
                 "update-project-statuses",
                 service => service.UpdateProjectStatusesAsync(),
-                Cron.Daily(), // Run every day at 12:00 AM UTC
+                Cron.Daily(), // Run every day at 12:00 AM Vietnam time
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             // 4. Cleanup Expired Refresh Tokens
@@ -61,10 +64,10 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<CleanupExpiredTokensCronJobService>(
                 "cleanup-expired-tokens",
                 service => service.CleanupExpiredTokensAsync(),
-                Cron.Daily(2), // Run daily at 2:00 AM UTC
+                Cron.Daily(), // Run daily at 12:00 AM Vietnam time
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             // 5. Cleanup Expired Pending Invitations
@@ -72,10 +75,10 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<CleanupPendingInvitationsCronJobService>(
                 "cleanup-pending-invitations",
                 service => service.CleanupExpiredInvitationsAsync(),
-                Cron.Daily(3), // Run daily at 3:00 AM UTC
+                Cron.Daily(), // Run daily at 12:00 AM Vietnam time
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             return app;
@@ -90,16 +93,18 @@ namespace MSP.Application.Extensions
         /// <returns>IApplicationBuilder for method chaining</returns>
         public static IApplicationBuilder UseHangfireJobs(
             this IApplicationBuilder app, 
-            string taskStatusCronExpression = "*/5 * * * *",
-            string meetingStatusCronExpression = "* * * * *")
+            string meetingStatusCronExpression = "*/5 * * * *")
         {
+            // Get Vietnam timezone (UTC+7)
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
             RecurringJob.AddOrUpdate<TaskStatusCronJobService>(
                 "update-overdue-tasks",
                 service => service.UpdateOverdueTasksAsync(),
-                taskStatusCronExpression,
+                Cron.Daily(),
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             RecurringJob.AddOrUpdate<MeetingStatusCronJobService>(
@@ -108,7 +113,7 @@ namespace MSP.Application.Extensions
                 meetingStatusCronExpression,
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             RecurringJob.AddOrUpdate<ProjectStatusCronJobService>(
@@ -117,25 +122,25 @@ namespace MSP.Application.Extensions
                 Cron.Daily(),
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             RecurringJob.AddOrUpdate<CleanupExpiredTokensCronJobService>(
                 "cleanup-expired-tokens",
                 service => service.CleanupExpiredTokensAsync(),
-                Cron.Daily(2),
+                Cron.Daily(),
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             RecurringJob.AddOrUpdate<CleanupPendingInvitationsCronJobService>(
                 "cleanup-pending-invitations",
                 service => service.CleanupExpiredInvitationsAsync(),
-                Cron.Daily(3),
+                Cron.Daily(),
                 new RecurringJobOptions
                 {
-                    TimeZone = TimeZoneInfo.Utc
+                    TimeZone = vietnamTimeZone
                 });
 
             return app;
