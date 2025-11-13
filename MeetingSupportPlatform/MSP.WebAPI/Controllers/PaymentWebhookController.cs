@@ -26,7 +26,7 @@ namespace MSP.WebAPI.Controllers
         /// Webhook endpoint - PayOS gọi vào đây khi thanh toán hoàn tất
         /// </summary>
         [HttpPost("webhook")]
-        public async Task<IActionResult> HandleWebhook([FromBody] JsonElement payload)
+        public async Task<IActionResult> HandleWebhook([FromBody] WebhookRequest payload)
         {
 
             try
@@ -34,7 +34,7 @@ namespace MSP.WebAPI.Controllers
                 _logger.LogInformation("Received PayOS webhook: {@Payload}", payload);
                 // 1. Verify webhook với Webhooks.VerifyAsync()
                 var rs = _paymentService.VerifyPayOSWebhook(payload);
-                _logger.LogInformation("🔍 Webhook verification result: {Result}", rs);
+                _logger.LogInformation("Webhook verification result: {Result}", rs);
                 if (!rs)
                 {
                     return BadRequest(new { error = "Invalid signature" });
@@ -71,29 +71,6 @@ namespace MSP.WebAPI.Controllers
         /// Đăng ký webhook URL với PayOS
         /// Chỉ cần gọi 1 lần khi setup
         /// </summary>
-        [HttpPost("confirm")]
-        public async Task<IActionResult> ConfirmWebhook([FromBody] ConfirmWebhookRequest request)
-        {
-
-            try
-            {
-                //var result = await _payOSClient.Webhooks.ConfirmAsync(webhookUrl);
-                var result = await _paymentService.ConfirmWebhookAsync(request.WebhookUrl);
-
-                _logger.LogInformation("Webhook confirmed successfully: {@Result}", result);
-                if(result == false)
-                {
-                    return BadRequest(new { success = false, message = "Failed to confirm webhook" });
-                }
-                return Ok(new { success = result, data = result });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while confirming webhook URL: {WebhookUrl}", request.WebhookUrl);
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-        }
-
         [HttpPost("confirm-test")]
         public IActionResult TestWebhook()
         {
