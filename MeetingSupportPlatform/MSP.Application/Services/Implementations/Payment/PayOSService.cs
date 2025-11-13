@@ -1,4 +1,5 @@
 ﻿using FFMpegCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MSP.Application.Models.Requests.Payment;
 using MSP.Application.Models.Responses.Payment;
@@ -36,10 +37,12 @@ namespace MSP.Application.Services.Implementations.Payment
     {
         private readonly PayOSConfiguration _options;
         private readonly ISubscriptionRepository _subscriptionRepository;
-        public PayOSService(IOptions<PayOSConfiguration> options, ISubscriptionRepository subscriptionRepository)
+        private readonly ILogger<PayOSService> _logger;
+        public PayOSService(IOptions<PayOSConfiguration> options, ISubscriptionRepository subscriptionRepository, ILogger<PayOSService> logger)
         {
             _options = options.Value;
             _subscriptionRepository = subscriptionRepository;
+            _logger = logger;
         }
         private string ClientId => _options.ClientId;
         private string ApiKey => _options.ApiKey;
@@ -108,71 +111,95 @@ namespace MSP.Application.Services.Implementations.Payment
 
         public async Task<bool> HandlePaymentWebhookAsync(JsonElement payload)
         {
-            var data = payload.GetProperty("data");
-            var orderCode = data.GetProperty("orderCode").GetInt32();
-            var amount = data.GetProperty("amount").GetInt32();
-            var code = data.GetProperty("code").GetString();
-            var desc = data.GetProperty("desc").GetString();
-            var reference = data.GetProperty("reference").GetString();
-            var transactionDateTime = data.GetProperty("transactionDateTime").GetString();
-            var subscription = await _subscriptionRepository.GetByOrderCodeAsync(orderCode);
-
-            if (subscription == null)
-                return false;
-
-            if (subscription.Status == PaymentEnum.Paid.ToString().ToUpper() || subscription.Status == PaymentEnum.Cancelled.ToString().ToUpper())
-                return true; // Đã xử lý rồi
-            if (code == "00")
+            try
             {
-                subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
-                subscription.PaidAt = DateTime.Parse(transactionDateTime, null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
-                subscription.PaymentMethod = "PayOS";
-                subscription.TransactionID = reference;
-                subscription.StartDate = DateTime.UtcNow;
-                subscription.EndDate = subscription.StartDate.Value.AddMonths(subscription.Package.BillingCycle);
+                var data = payload.GetProperty("data");
+                var orderCode = data.GetProperty("orderCode").GetInt32();
+                var amount = data.GetProperty("amount").GetInt32();
+                var code = data.GetProperty("code").GetString();
+                var desc = data.GetProperty("desc").GetString();
+                var reference = data.GetProperty("reference").GetString();
+                var transactionDateTime = data.GetProperty("transactionDateTime").GetString();
+                _logger.LogInformation("Webhook Data => OrderCode: {OrderCode}, Amount: {Amount}, Code: {Code}, Desc: {Desc}, Ref: {Ref}, TxnTime: {TxnTime}",
+        orderCode, amount, code, desc, reference, transactionDateTime);
+                var subscription = await _subscriptionRepository.GetByOrderCodeAsync(orderCode);
+
+                if (subscription == null)
+                {
+                    _logger.LogWarning("⚠️ Subscription with orderCode {OrderCode} not found!", orderCode);
+                    return false;
+                }
+
+                if (subscription.Status == PaymentEnum.Paid.ToString().ToUpper())
+                {
+                    _logger.LogInformation("ℹ️ Subscription already processed (Status: {Status})", subscription.Status);
+                    return true;
+                }
+
+                if (code == "00")
+                {
+                    subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
+                    subscription.PaidAt = DateTime.Parse(transactionDateTime, null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+                    subscription.PaymentMethod = "PayOS";
+                    subscription.TransactionID = reference;
+                    subscription.StartDate = DateTime.UtcNow;
+                    subscription.EndDate = subscription.StartDate.Value.AddMonths(subscription.Package.BillingCycle);
+                }
+                else
+                {
+                    _logger.LogWarning("❌ Payment failed or unrecognized code: {Code}", code);
+                }
+                subscription.UpdatedAt = DateTime.UtcNow;
+                await _subscriptionRepository.UpdateAsync(subscription);
+                await _subscriptionRepository.SaveChangesAsync();
+
+                return true;
+            } catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while handling payment webhook: {Message}", ex.Message);
+                return false;
             }
-
-            subscription.UpdatedAt = DateTime.UtcNow;
-            await _subscriptionRepository.UpdateAsync(subscription);
-            await _subscriptionRepository.SaveChangesAsync();
-
-            return true;
+ 
         }
 
-        public string GenerateSignature(string rawData)
-        {
-            var key = Encoding.UTF8.GetBytes(ChecksumKey);
-            var data = Encoding.UTF8.GetBytes(rawData);
-            using var hmac = new HMACSHA256(key);
-            var hash = hmac.ComputeHash(data);
-            return BitConverter.ToString(hash).Replace("-", "").ToLower();
-        }
 
 
         public bool VerifyPayOSWebhook(JsonElement payload)
         {
-            var data = payload.GetProperty("data");
-
-            // Tạo dictionary chứa tất cả các key-value trong "data"
-            var dict = new SortedDictionary<string, string>();
-            foreach (var prop in data.EnumerateObject())
+            try
             {
-                dict[prop.Name] = prop.Value.GetRawText().Trim('"');
+                _logger.LogInformation("Start verifying PayOS webhook...");
+                var data = payload.GetProperty("data");
+
+                // Tạo dictionary chứa tất cả các key-value trong "data"
+                var dict = new SortedDictionary<string, string>();
+                foreach (var prop in data.EnumerateObject())
+                {
+                    dict[prop.Name] = prop.Value.GetRawText().Trim('"');
+                }
+
+                // Build raw data string: key1=value1&key2=value2&...
+                var rawBuilder = new StringBuilder();
+                foreach (var kvp in dict)
+                {
+                    rawBuilder.Append($"{kvp.Key}={kvp.Value}&");
+                }
+                rawBuilder.Length--; // Bỏ dấu '&' cuối cùng
+
+                var rawData = rawBuilder.ToString();
+                var generatedSignature = GenerateSignature(rawData);
+                var providedSignature = payload.GetProperty("signature").GetString();
+                _logger.LogInformation("Raw data for signature: {RawData}", rawData);
+                _logger.LogInformation("Generated signature: {Generated}", generatedSignature);
+                _logger.LogInformation("Provided signature: {Provided}", providedSignature);
+                return generatedSignature == providedSignature;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during webhook verification: {Message}", ex.Message);
+                return false;
             }
 
-            // Build raw data string: key1=value1&key2=value2&...
-            var rawBuilder = new StringBuilder();
-            foreach (var kvp in dict)
-            {
-                rawBuilder.Append($"{kvp.Key}={kvp.Value}&");
-            }
-            rawBuilder.Length--; // Bỏ dấu '&' cuối cùng
-
-            var rawData = rawBuilder.ToString();
-            var generatedSignature = GenerateSignature(rawData);
-            var providedSignature = payload.GetProperty("signature").GetString();
-
-            return generatedSignature == providedSignature;
         }
 
 
@@ -199,6 +226,15 @@ namespace MSP.Application.Services.Implementations.Payment
                 Console.WriteLine($"Error while confirming webhook: {ex.Message}");
                 return false;
             }
+        }
+
+        public string GenerateSignature(string rawData)
+        {
+            var key = Encoding.UTF8.GetBytes(ChecksumKey);
+            var data = Encoding.UTF8.GetBytes(rawData);
+            using var hmac = new HMACSHA256(key);
+            var hash = hmac.ComputeHash(data);
+            return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
 
 
