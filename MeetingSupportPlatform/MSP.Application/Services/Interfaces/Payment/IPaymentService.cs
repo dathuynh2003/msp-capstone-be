@@ -12,9 +12,8 @@ namespace MSP.Application.Services.Interfaces.Payment
 {
     public interface IPaymentService
     {
-        Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentRequest request);
-        Task<bool> HandlePaymentWebhookAsync(JsonElement payload);
-        bool VerifyPayOSWebhook(JsonElement payload);
-        Task<bool> ConfirmWebhookAsync(string webhookUrl);
+        Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentLinkRequest request);
+        Task<bool> HandlePaymentWebhookAsync(WebhookRequest payload);
+        bool VerifyPayOSWebhook(WebhookRequest payload);
     }
 }

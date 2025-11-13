@@ -41,7 +41,7 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
                 TransactionID = string.Empty,
                 PaymentMethod = string.Empty,
             };
-            var paymentRequest = new CreatePaymentRequest
+            var paymentRequest = new CreatePaymentLinkRequest
             {
                 Amount = (int)package.Price,
                 Description = $"Subscription package",

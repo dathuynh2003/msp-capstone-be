@@ -10,7 +10,7 @@ using MSP.Shared.Enums;
 using PayOS;
 using PayOS.Exceptions;
 using PayOS.Models;
-using PayOS.Models.V2.PaymentRequests;
+using Serilog.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +18,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -48,23 +49,18 @@ namespace MSP.Application.Services.Implementations.Payment
         private string ApiKey => _options.ApiKey;
         private string ChecksumKey => _options.ChecksumKey;
         private string BaseUrl => _options.BaseUrl;
-        public async Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentRequest request)
+
+        // tạo payment link
+        public async Task<PaymentResponse> CreatePaymentLinkAsync(CreatePaymentLinkRequest request)
         {
-            
-            // create order code
-            long generateOrderCode = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var raw = $"amount={request.Amount}&cancelUrl={request.CancelUrl}&description={request.Description}&orderCode={generateOrderCode}&returnUrl={request.ReturnUrl}";
-            var sig = GenerateSignature(raw);
-            var body = new 
-            {
-                orderCode = generateOrderCode,
-                amount = request.Amount,
-                description = request.Description,
-                returnUrl = request.ReturnUrl,
-                cancelUrl = request.CancelUrl,
-                signature = sig,
-            };
-            var json = JsonSerializer.Serialize(body);
+            request.OrderCode = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            var raw = $"amount={request.Amount}&cancelUrl={request.CancelUrl}&description={request.Description}&orderCode={request.OrderCode}&returnUrl={request.ReturnUrl}";
+            request.Signature = GenerateSignature(raw);
+  
+
+            // body request
+            var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             try
@@ -73,73 +69,59 @@ namespace MSP.Application.Services.Implementations.Payment
                 client.DefaultRequestHeaders.Add("x-client-id", ClientId);
                 client.DefaultRequestHeaders.Add("x-api-key", ApiKey);
 
-                var res = await client.PostAsync($"{BaseUrl}/v2/payment-requests", content);
-                res.EnsureSuccessStatusCode(); // ném HttpRequestException nếu lỗi HTTP
+                var response = await client.PostAsync($"{BaseUrl}/v2/payment-requests", content);
+                response.EnsureSuccessStatusCode();
 
-                var responseJson = await res.Content.ReadAsStringAsync();
-                var doc = JsonDocument.Parse(responseJson);
-                var dataElement = doc.RootElement.GetProperty("data");
-                var checkoutUrl = dataElement.GetProperty("checkoutUrl").GetString();
-                var qrCode = dataElement.GetProperty("qrCode").GetString();
-                var status = dataElement.GetProperty("status").GetString();
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var payOSResponse = JsonSerializer.Deserialize<PayOSPaymentResponse>(responseJson);
+
                 return new PaymentResponse
                 {
-                    CheckoutUrl = checkoutUrl,
-                    QrCode = qrCode,
-                    OrderCode = generateOrderCode,
+                    CheckoutUrl = payOSResponse.Data.CheckoutUrl,
+                    QrCode = payOSResponse.Data.QrCode,
+                    OrderCode = request.OrderCode,
                     Amount = request.Amount,
-                    Status = status
+                    Status = payOSResponse.Data.Status
                 };
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"HTTP Error: {ex.Message}");
-                throw;
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine($"JSON Parse Error: {ex.Message}");
-                throw;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unexpected Error: {ex.Message}");
+                _logger.LogError(ex, "Error creating payment link");
                 throw;
             }
-
         }
-
-        public async Task<bool> HandlePaymentWebhookAsync(JsonElement payload)
+        // xử lí webhook thanh toán 
+        public async Task<bool> HandlePaymentWebhookAsync(WebhookRequest payload)
         {
             try
             {
-                var data = payload.GetProperty("data");
-                var orderCode = data.GetProperty("orderCode").GetInt32();
-                var amount = data.GetProperty("amount").GetInt32();
-                var code = data.GetProperty("code").GetString();
-                var desc = data.GetProperty("desc").GetString();
-                var reference = data.GetProperty("reference").GetString();
-                var transactionDateTime = data.GetProperty("transactionDateTime").GetString();
-                _logger.LogInformation("Webhook Data => OrderCode: {OrderCode}, Amount: {Amount}, Code: {Code}, Desc: {Desc}, Ref: {Ref}, TxnTime: {TxnTime}",
-        orderCode, amount, code, desc, reference, transactionDateTime);
+                var data = payload.Data;
+                var orderCode = data.OrderCode;
+                var amount = data.Amount;
+                var code = data.Code;
+                var desc = data.Desc;
+                var reference = data.Reference;
+                var transactionDateTime = data.TransactionDateTime;
+
                 var subscription = await _subscriptionRepository.GetByOrderCodeAsync(orderCode);
 
                 if (subscription == null)
                 {
-                    _logger.LogWarning("⚠️ Subscription with orderCode {OrderCode} not found!", orderCode);
+                    _logger.LogWarning("Subscription with orderCode {OrderCode} not found!", orderCode);
                     return false;
                 }
 
                 if (subscription.Status == PaymentEnum.Paid.ToString().ToUpper())
                 {
-                    _logger.LogInformation("ℹ️ Subscription already processed (Status: {Status})", subscription.Status);
+                    _logger.LogInformation("Subscription already processed (Status: {Status})", subscription.Status);
                     return true;
                 }
 
                 if (code == "00")
                 {
                     subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
-                    subscription.PaidAt = DateTime.Parse(transactionDateTime, null, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+                    subscription.PaidAt = DateTime.Parse(transactionDateTime, null,
+                        System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
                     subscription.PaymentMethod = "PayOS";
                     subscription.TransactionID = reference;
                     subscription.StartDate = DateTime.UtcNow;
@@ -147,87 +129,46 @@ namespace MSP.Application.Services.Implementations.Payment
                 }
                 else
                 {
-                    _logger.LogWarning("❌ Payment failed or unrecognized code: {Code}", code);
+                    _logger.LogWarning("Payment failed or unrecognized code: {Code}", code);
                 }
+
                 subscription.UpdatedAt = DateTime.UtcNow;
                 await _subscriptionRepository.UpdateAsync(subscription);
                 await _subscriptionRepository.SaveChangesAsync();
 
                 return true;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while handling payment webhook: {Message}", ex.Message);
                 return false;
             }
- 
         }
 
 
-
-        public bool VerifyPayOSWebhook(JsonElement payload)
+        // xác minh chữ ký webhook(payouts)từ PayOS
+        public bool VerifyPayOSWebhook(WebhookRequest payload)
         {
             try
             {
                 _logger.LogInformation("Start verifying PayOS webhook...");
-                var data = payload.GetProperty("data");
 
-                // Tạo dictionary chứa tất cả các key-value trong "data"
-                var dict = new SortedDictionary<string, string>();
-                foreach (var prop in data.EnumerateObject())
-                {
-                    dict[prop.Name] = prop.Value.GetRawText().Trim('"');
-                }
-
-                // Build raw data string: key1=value1&key2=value2&...
-                var rawBuilder = new StringBuilder();
-                foreach (var kvp in dict)
-                {
-                    rawBuilder.Append($"{kvp.Key}={kvp.Value}&");
-                }
-                rawBuilder.Length--; // Bỏ dấu '&' cuối cùng
-
-                var rawData = rawBuilder.ToString();
-                var generatedSignature = GenerateSignature(rawData);
-                var providedSignature = payload.GetProperty("signature").GetString();
-                _logger.LogInformation("Raw data for signature: {RawData}", rawData);
+                // Tạo signature từ object Data
+                var generatedSignature = GeneratePayoutSignature(payload.Data);
                 _logger.LogInformation("Generated signature: {Generated}", generatedSignature);
-                _logger.LogInformation("Provided signature: {Provided}", providedSignature);
-                return generatedSignature == providedSignature;
+                _logger.LogInformation("Provided signature: {Provided}", payload.Signature);
+
+                return generatedSignature.Equals(payload.Signature, StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during webhook verification: {Message}", ex.Message);
                 return false;
             }
-
         }
 
 
-        public async Task<bool> ConfirmWebhookAsync(string webhookUrl)
-        {
-            try
-            {
-                var payload = new { webhookUrl = webhookUrl };
-                var json = JsonSerializer.Serialize(payload);
-                Console.WriteLine($"Confirming webhook with payload: {json}");
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                using var client = new HttpClient();
-                client.DefaultRequestHeaders.Add("x-client-id", ClientId);
-                client.DefaultRequestHeaders.Add("x-api-key", ApiKey);
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var res = await client.PostAsync($"{BaseUrl}/confirm-webhook", content);
-                var responseBody = await res.Content.ReadAsStringAsync();
-                Console.WriteLine($"PayOS response: {responseBody}");
-                return res.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error while confirming webhook: {ex.Message}");
-                return false;
-            }
-        }
-
+        // tạo signature payment-request(create payment link)
         public string GenerateSignature(string rawData)
         {
             var key = Encoding.UTF8.GetBytes(ChecksumKey);
@@ -237,6 +178,27 @@ namespace MSP.Application.Services.Implementations.Payment
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
 
+        // tạo signature payouts (verify webhook)
+        public string GeneratePayoutSignature(WebhookPaymentData data)
+        {
+            var dict = new SortedDictionary<string, string>();
+
+            foreach (var prop in typeof(WebhookPaymentData).GetProperties())
+            {
+                var value = prop.GetValue(data);
+                string strValue = value?.ToString() ?? "";
+
+                // Lấy tên json nếu có [JsonPropertyName], fallback prop.Name
+                var jsonNameAttr = prop.GetCustomAttributes(typeof(JsonPropertyNameAttribute), false)
+                                       .FirstOrDefault() as JsonPropertyNameAttribute;
+                string keyName = jsonNameAttr?.Name ?? prop.Name;
+
+                dict[keyName] = strValue;
+            }
+
+            var rawData = string.Join("&", dict.Select(kv => $"{kv.Key}={kv.Value}"));
+            return GenerateSignature(rawData);
+        }
 
     }
 }

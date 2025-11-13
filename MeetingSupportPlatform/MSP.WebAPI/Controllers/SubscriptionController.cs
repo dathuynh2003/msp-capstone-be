@@ -18,7 +18,7 @@ namespace MSP.WebAPI.Controllers
         /// API mua package
         /// </summary>
         [HttpPost("purchase")]
-        public async Task<IActionResult> PurchasePackage([FromBody] CreateSubscriptionRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> PurchasePackage([FromBody] CreateSubscriptionRequest request)
         {
             try
             {
