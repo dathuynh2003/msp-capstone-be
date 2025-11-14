@@ -1,29 +1,40 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MSP.Application.Services.Interfaces.Auth;
+using Microsoft.Extensions.Options;
 using MSP.Application.Services.Implementations.Auth;
-using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Implementations.Limitation;
 using MSP.Application.Services.Implementations.Meeting;
-using MSP.Application.Services.Interfaces.Meeting;
-using MSP.Application.Services.Implementations.Summarize;
-using MSP.Application.Services.Interfaces.Summarize;
-using MSP.Application.Services.Interfaces.Project;
-using MSP.Application.Services.Implementations.Project;
-using MSP.Application.Services.Interfaces.Milestone;
 using MSP.Application.Services.Implementations.Milestone;
-using MSP.Application.Services.Interfaces.ProjectTask;
-using MSP.Application.Services.Implementations.ProjectTask;
-using MSP.Application.Services.Interfaces.Users;
-using MSP.Application.Services.Implementations.Users;
-using MSP.Application.Services.Interfaces.Todos;
-using MSP.Application.Services.Implementations.Todos;
-using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
 using MSP.Application.Services.Interfaces.TaskReassignRequest;
 using MSP.Application.Services.Implementations.TaskReassignRequest;
 using MSP.Application.Services.Implementations.Cleanup;
 using MSP.Application.Services.Interfaces.Document;
 using MSP.Application.Services.Implementations.Document;
+using MSP.Application.Services.Implementations.Package;
+using MSP.Application.Services.Implementations.Payment;
+using MSP.Application.Services.Implementations.Project;
+using MSP.Application.Services.Implementations.ProjectTask;
+using MSP.Application.Services.Implementations.SubscriptionService;
+using MSP.Application.Services.Implementations.Summarize;
+using MSP.Application.Services.Implementations.TaskHistory;
+using MSP.Application.Services.Implementations.Todos;
+using MSP.Application.Services.Implementations.Users;
+using MSP.Application.Services.Interfaces.Auth;
+using MSP.Application.Services.Interfaces.Limitation;
+using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Services.Interfaces.Milestone;
+using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Interfaces.OrganizationInvitation;
+using MSP.Application.Services.Interfaces.Package;
+using MSP.Application.Services.Interfaces.Payment;
+using MSP.Application.Services.Interfaces.Project;
+using MSP.Application.Services.Interfaces.ProjectTask;
+using MSP.Application.Services.Interfaces.Summarize;
+using MSP.Application.Services.Interfaces.TaskHistory;
+using MSP.Application.Services.Interfaces.Todos;
+using MSP.Application.Services.Interfaces.Users;
+using PayOS;
 
 namespace MSP.Application.Extensions
 {
@@ -44,8 +55,13 @@ namespace MSP.Application.Extensions
             services.AddScoped<ITodoService, TodoService>();
             services.AddScoped<ITaskReassignRequestService, TaskReassignRequestService>();
             services.AddScoped<IDocumentService, DocumentService>();
+            services.AddScoped<ITaskHistoryService, TaskHistoryService>();
+            services.AddScoped<IPackageService, PackageService>();
+            services.AddScoped<IPaymentService, PayOSService>();
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
+            services.AddScoped<ILimitationService, LimitationService>();
             
-            // Register Hangfire Cron Job Services
+            // Register Hangfire Job Services
             services.AddScoped<TaskStatusCronJobService>();
             services.AddScoped<MeetingStatusCronJobService>();
             services.AddScoped<ProjectStatusCronJobService>();
@@ -57,6 +73,9 @@ namespace MSP.Application.Extensions
             // Register StreamSettings from appsettings.json
             services.Configure<StreamSettings>(
                 configuration.GetSection("Stream"));
+
+            //Configure PayOS Settings
+            services.Configure<PayOSConfiguration>(configuration.GetSection("PayOS"));
 
             // Register HttpClientFactory
             services.AddHttpClient();

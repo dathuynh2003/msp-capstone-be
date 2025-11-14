@@ -8,6 +8,7 @@ namespace MSP.Application.Models.Requests.Limitation
 {
     public class UpdateLimitationRequest
     {
+        public Guid LimitationId { get; set; }
         public string Name { get; set; }
         public string? Description { get; set; }
         public bool IsUnlimited { get; set; }

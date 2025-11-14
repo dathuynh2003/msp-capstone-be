@@ -1,0 +1,32 @@
+name: Build & Deploy MeetingSupportPlatform
+
+on:
+  push:
+    branches:
+      - main
+# Edit yml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to VPS via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_HOST }} << 'EOF'
+            cd /root/services/msp-capstone-be/MeetingSupportPlatform
+            git pull
+
+            docker rm -f msp-capstone-be || true
+            docker rmi msp-capstone-be || true
+
+            docker build -t msp-capstone-be .
+            docker run -d -p 8080:8080 --name msp-capstone-be msp-capstone-be
+          EOF

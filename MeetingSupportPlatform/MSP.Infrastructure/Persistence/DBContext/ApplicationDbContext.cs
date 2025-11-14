@@ -29,7 +29,8 @@ namespace MSP.Infrastructure.Persistence.DBContext
         public DbSet<Limitation> Limitations { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<OrganizationInvitation> OrganizationInvitations { get; set; }
-        public DbSet<TaskReassignRequest> TaskReassignRequests { get; set; }
+        public DbSet<TaskHistory> TaskHistories { get; set; }
+
 
 
 
@@ -260,28 +261,23 @@ namespace MSP.Infrastructure.Persistence.DBContext
                 entity.HasIndex(e => e.Type);
             });
 
-            // TaskReassignRequest
-            builder.Entity<TaskReassignRequest>(entity =>
+            // TaskHistory
+            builder.Entity<TaskHistory>(entity =>
             {
-                entity.HasOne(r => r.Task)
-                    .WithMany(t => t.TaskReassignRequests)
-                    .HasForeignKey(r => r.TaskId)
+                entity.HasOne(h => h.Task)
+                    .WithMany(t => t.TaskHistories)
+                    .HasForeignKey(h => h.TaskId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(r => r.FromUser)
+                entity.HasOne(h => h.FromUser)
                     .WithMany()
-                    .HasForeignKey(r => r.FromUserId)
+                    .HasForeignKey(h => h.FromUserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(r => r.ToUser)
+                entity.HasOne(h => h.ToUser)
                     .WithMany()
-                    .HasForeignKey(r => r.ToUserId)
+                    .HasForeignKey(h => h.ToUserId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                entity.Property(r => r.Status)
-                    .IsRequired()
-                    .HasMaxLength(50);
-
             });
         }
     }

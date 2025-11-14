@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 
 namespace MSP.Application.Models.Requests.TaskReassignRequest
 {
-    public class CreateTaskReassignRequestRequest
+    public class CreateTaskHistoryRequest
     {
         public Guid TaskId { get; set; }
-        public Guid FromUserId { get; set; }
+        public Guid? FromUserId { get; set; }
         public Guid ToUserId { get; set; }
-        public string Description { get; set; }
 
     }
 }

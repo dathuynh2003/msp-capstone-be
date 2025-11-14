@@ -1,5 +1,6 @@
 ﻿using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Models.Responses.Milestone;
+using MSP.Application.Models.Responses.TaskHistory;
 
 namespace MSP.Application.Models.Responses.ProjectTask
 {
@@ -18,5 +19,7 @@ namespace MSP.Application.Models.Responses.ProjectTask
 
         public GetUserResponse? User { get; set; }
         public GetMilestoneResponse[]? Milestones { get; set; } = Array.Empty<GetMilestoneResponse>();
+        public IEnumerable<GetTaskHistoryResponse>? TaskHistories { get; set; }
+
     }
 }

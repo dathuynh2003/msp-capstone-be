@@ -17,5 +17,18 @@ namespace MSP.Infrastructure.Repositories
             return await _context.Limitations
                .FirstOrDefaultAsync(m => m.Id == id);
         }
+        public async Task<List<Limitation>> GetAll()
+        {
+            return await _context.Limitations
+                .Where(l => !l.IsDeleted)
+                .ToListAsync();
+        }
+        public async Task<List<Limitation>> GetByIdsAsync(IEnumerable<Guid> ids)
+        {
+            return await _context.Limitations
+                .Where(l => ids.Contains(l.Id) && !l.IsDeleted)
+                .ToListAsync();
+        }
+
     }
 }

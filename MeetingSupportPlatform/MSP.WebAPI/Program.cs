@@ -55,10 +55,15 @@ builder.Services.AddHttpClient();
 
 // Add Hangfire
 builder.Services.AddHangfire(config =>
-    config.UsePostgreSqlStorage(options =>
-    {
-        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DbConnectionString"));
-    }));
+{
+    config.UsePostgreSqlStorage(
+        builder.Configuration.GetConnectionString("DbConnectionString"),
+        new PostgreSqlStorageOptions
+        {
+            SchemaName = "hangfire",
+            DistributedLockTimeout = TimeSpan.FromMinutes(5) // tăng timeout để tránh lỗi
+        });
+});
 
 builder.Services.AddHangfireServer();
 
@@ -99,7 +104,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 // Add routing
 app.UseRouting();
