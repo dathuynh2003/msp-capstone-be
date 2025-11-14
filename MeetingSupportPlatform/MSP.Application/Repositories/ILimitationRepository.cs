@@ -12,6 +12,6 @@ namespace MSP.Application.Repositories
     {
         Task<Limitation?> GetLimitationByIdAsync(Guid id);
         Task<List<Limitation>> GetAll();
-
+        Task<List<Limitation>> GetByIdsAsync(IEnumerable<Guid> ids);
     }
 }
