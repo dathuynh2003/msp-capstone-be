@@ -12,5 +12,6 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<ProjectTask>> GetTasksByIdsAsync(List<Guid> id);
         Task<IEnumerable<ProjectTask>> GetTasksByTodoIdAsync(Guid todoId);
         Task<IEnumerable<ProjectTask>> GetOverdueTasksAsync(DateTime currentTime, string overDueStatus, string completedStatus);
+        Task<IEnumerable<ProjectTask>> GetTasksWithUpcomingDeadlinesAsync(DateTime startRange, DateTime endRange, string[] excludeStatuses);
     }
 }

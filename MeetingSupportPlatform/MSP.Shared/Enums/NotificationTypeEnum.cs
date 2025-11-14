@@ -5,6 +5,10 @@
         Email,
         SMS,
         Push,
-        InApp
+        InApp,
+        TaskAssignment,
+        TaskUpdate,
+        ProjectUpdate,
+        MeetingReminder
     }
 }

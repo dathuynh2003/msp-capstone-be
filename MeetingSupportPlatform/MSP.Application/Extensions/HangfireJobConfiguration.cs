@@ -23,7 +23,7 @@ namespace MSP.Application.Extensions
             var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
             // 1. Task Status Cron Job
-            // Automatically check and update overdue tasks to OverDue status
+            // Automatically check and update overdue tasks to OverDue status + send notifications
             RecurringJob.AddOrUpdate<TaskStatusCronJobService>(
                 "update-overdue-tasks",
                 service => service.UpdateOverdueTasksAsync(),
@@ -75,6 +75,17 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<CleanupPendingInvitationsCronJobService>(
                 "cleanup-pending-invitations",
                 service => service.CleanupExpiredInvitationsAsync(),
+                Cron.Daily(), // Run daily at 12:00 AM Vietnam time
+                new RecurringJobOptions
+                {
+                    TimeZone = vietnamTimeZone
+                });
+
+            // 6. Task Deadline Reminder
+            // Send reminder notifications for tasks that are due in 1-2 days
+            RecurringJob.AddOrUpdate<TaskReminderCronJobService>(
+                "send-task-deadline-reminders",
+                service => service.SendDeadlineRemindersAsync(),
                 Cron.Daily(), // Run daily at 12:00 AM Vietnam time
                 new RecurringJobOptions
                 {
@@ -137,6 +148,15 @@ namespace MSP.Application.Extensions
             RecurringJob.AddOrUpdate<CleanupPendingInvitationsCronJobService>(
                 "cleanup-pending-invitations",
                 service => service.CleanupExpiredInvitationsAsync(),
+                Cron.Daily(),
+                new RecurringJobOptions
+                {
+                    TimeZone = vietnamTimeZone
+                });
+
+            RecurringJob.AddOrUpdate<TaskReminderCronJobService>(
+                "send-task-deadline-reminders",
+                service => service.SendDeadlineRemindersAsync(),
                 Cron.Daily(),
                 new RecurringJobOptions
                 {

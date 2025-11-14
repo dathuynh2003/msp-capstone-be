@@ -51,6 +51,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<ProjectStatusCronJobService>();
             services.AddScoped<CleanupExpiredTokensCronJobService>();
             services.AddScoped<CleanupPendingInvitationsCronJobService>();
+            services.AddScoped<TaskReminderCronJobService>();
 
             // Register StreamSettings from appsettings.json
             services.Configure<StreamSettings>(

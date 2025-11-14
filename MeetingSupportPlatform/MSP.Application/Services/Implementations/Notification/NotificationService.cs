@@ -53,9 +53,11 @@ namespace MSP.Application.Services.Implementations.Notification
                 var notification = new Domain.Entities.Notification
                 {
                     UserId = request.UserId,
+                    ActorId = request.ActorId,
                     Title = request.Title,
                     Message = request.Message,
                     Type = request.Type ?? NotificationTypeEnum.InApp.ToString(),
+                    EntityId = request.EntityId,
                     Data = request.Data,
                     CreatedAt = DateTime.UtcNow
                 };

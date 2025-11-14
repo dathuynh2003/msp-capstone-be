@@ -69,5 +69,18 @@ namespace MSP.Infrastructure.Repositories
                     task.Status != completedStatus)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<ProjectTask>> GetTasksWithUpcomingDeadlinesAsync(DateTime startRange, DateTime endRange, string[] excludeStatuses)
+        {
+            return await _context.ProjectTasks
+                .Where(task =>
+                    !task.IsDeleted &&
+                    task.EndDate.HasValue &&
+                    task.EndDate.Value.Date >= startRange.Date &&
+                    task.EndDate.Value.Date <= endRange.Date &&
+                    task.UserId.HasValue &&
+                    !excludeStatuses.Contains(task.Status))
+                .ToListAsync();
+        }
     }
 }

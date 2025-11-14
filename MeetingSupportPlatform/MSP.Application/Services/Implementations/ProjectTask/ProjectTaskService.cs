@@ -6,8 +6,11 @@ using MSP.Application.Models.Responses.Milestone;
 using MSP.Application.Models.Responses.ProjectTask;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.ProjectTask;
+using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Models.Requests.Notification;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
+using MSP.Shared.Enums;
 
 namespace MSP.Application.Services.Implementations.ProjectTask
 {
@@ -18,14 +21,16 @@ namespace MSP.Application.Services.Implementations.ProjectTask
         private readonly IMilestoneRepository _milestoneRepository;
         private readonly ITodoRepository _todoRepository;
         private readonly UserManager<User> _userManager;
+        private readonly INotificationService _notificationService;
 
-        public ProjectTaskService(IProjectTaskRepository projectTaskRepository, IProjectRepository projectRepository, IMilestoneRepository milestoneRepository, UserManager<User> userManager, ITodoRepository todoRepository)
+        public ProjectTaskService(IProjectTaskRepository projectTaskRepository, IProjectRepository projectRepository, IMilestoneRepository milestoneRepository, UserManager<User> userManager, ITodoRepository todoRepository, INotificationService notificationService)
         {
             _projectTaskRepository = projectTaskRepository;
             _projectRepository = projectRepository;
             _milestoneRepository = milestoneRepository;
             _userManager = userManager;
             _todoRepository = todoRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse<GetTaskResponse>> CreateTaskAsync(CreateTaskRequest request)
@@ -76,6 +81,37 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
             await _projectTaskRepository.AddAsync(newTask);
             await _projectTaskRepository.SaveChangesAsync();
+
+            // Gửi notification nếu task được assign cho user
+            if (request.UserId.HasValue && user != null)
+            {
+                var notificationRequest = new CreateNotificationRequest
+                {
+                    UserId = request.UserId.Value,
+                    ActorId = request.ActorId,
+                    Title = "New Task Assigned",
+                    Message = $"You have been assigned to task: {newTask.Title} in project {project.Name}",
+                    Type = NotificationTypeEnum.TaskAssignment.ToString(),
+                    EntityId = newTask.Id.ToString(),
+                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        TaskId = newTask.Id,
+                        TaskTitle = newTask.Title,
+                        ProjectId = project.Id,
+                        ProjectName = project.Name,
+                        DueDate = newTask.EndDate
+                    })
+                };
+
+                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                // Gửi email notification (async via Hangfire)
+                _notificationService.SendEmailNotification(
+                    user.Email!,
+                    "New Task Assigned",
+                    $"Hi {user.FullName},<br/><br/>You have been assigned to a new task: <strong>{newTask.Title}</strong><br/>Project: {project.Name}<br/>Due Date: {newTask.EndDate:yyyy-MM-dd}<br/><br/>Please check your dashboard for more details."
+                );
+            }
 
             var response = new GetTaskResponse
             {
@@ -296,6 +332,9 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found or has been deleted");
             }
 
+            // Lưu UserId cũ để so sánh
+            var oldUserId = task.UserId;
+
             User? user = null;
             if (request.UserId.HasValue)
             {
@@ -335,6 +374,57 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
             await _projectTaskRepository.UpdateAsync(task);
             await _projectTaskRepository.SaveChangesAsync();
+
+            // Gửi notification nếu task được assign/reassign cho user khác
+            if (request.UserId.HasValue && request.UserId != oldUserId && user != null)
+            {
+                string notificationMessage;
+                string emailSubject;
+                string emailBody;
+
+                if (oldUserId.HasValue)
+                {
+                    // Task được reassign từ user khác
+                    notificationMessage = $"Task '{task.Title}' has been reassigned to you in project {project.Name}";
+                    emailSubject = "Task Reassigned";
+                    emailBody = $"Hi {user.FullName},<br/><br/>The task <strong>{task.Title}</strong> has been reassigned to you.<br/>Project: {project.Name}<br/>Due Date: {task.EndDate:yyyy-MM-dd}<br/><br/>Please check your dashboard for more details.";
+                }
+                else
+                {
+                    // Task được assign lần đầu
+                    notificationMessage = $"You have been assigned to task: {task.Title} in project {project.Name}";
+                    emailSubject = "New Task Assigned";
+                    emailBody = $"Hi {user.FullName},<br/><br/>You have been assigned to task: <strong>{task.Title}</strong><br/>Project: {project.Name}<br/>Due Date: {task.EndDate:yyyy-MM-dd}<br/><br/>Please check your dashboard for more details.";
+                }
+
+                var notificationRequest = new CreateNotificationRequest
+                {
+                    UserId = request.UserId.Value,
+                    ActorId = request.ActorId,
+                    Title = emailSubject,
+                    Message = notificationMessage,
+                    Type = NotificationTypeEnum.TaskAssignment.ToString(),
+                    EntityId = task.Id.ToString(),
+                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        TaskId = task.Id,
+                        TaskTitle = task.Title,
+                        ProjectId = project.Id,
+                        ProjectName = project.Name,
+                        DueDate = task.EndDate,
+                        IsReassignment = oldUserId.HasValue
+                    })
+                };
+
+                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                //// Gửi email notification (async via Hangfire)
+                //_notificationService.SendEmailNotification(
+                //    user.Email!,
+                //    emailSubject,
+                //    emailBody
+                //);
+            }
 
             var response = new GetTaskResponse
             {
