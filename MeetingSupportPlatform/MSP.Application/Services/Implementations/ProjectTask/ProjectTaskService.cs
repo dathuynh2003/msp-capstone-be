@@ -347,7 +347,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             {
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Task not found");
             }
-            var oldUserId = task.UserId;
+
             var project = await _projectRepository.GetByIdAsync(task.ProjectId);
             if (project == null || project.IsDeleted)
             {

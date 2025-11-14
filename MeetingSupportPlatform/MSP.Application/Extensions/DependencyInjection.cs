@@ -1,13 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MSP.Application.Services.Implementations.Auth;
 using MSP.Application.Services.Implementations.Limitation;
 using MSP.Application.Services.Implementations.Meeting;
 using MSP.Application.Services.Implementations.Milestone;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
-using MSP.Application.Services.Interfaces.TaskReassignRequest;
-using MSP.Application.Services.Implementations.TaskReassignRequest;
 using MSP.Application.Services.Implementations.Cleanup;
 using MSP.Application.Services.Interfaces.Document;
 using MSP.Application.Services.Implementations.Document;
@@ -35,6 +32,7 @@ using MSP.Application.Services.Interfaces.TaskHistory;
 using MSP.Application.Services.Interfaces.Todos;
 using MSP.Application.Services.Interfaces.Users;
 using PayOS;
+using MSP.Application.Services.Interfaces.Subscription;
 
 namespace MSP.Application.Extensions
 {
@@ -53,7 +51,6 @@ namespace MSP.Application.Extensions
             services.AddScoped<IOrganizationInvitationService, OrganizationInvitationService>();
             services.AddScoped<IMeetingService, MeetingService>();
             services.AddScoped<ITodoService, TodoService>();
-            services.AddScoped<ITaskReassignRequestService, TaskReassignRequestService>();
             services.AddScoped<IDocumentService, DocumentService>();
             services.AddScoped<ITaskHistoryService, TaskHistoryService>();
             services.AddScoped<IPackageService, PackageService>();
