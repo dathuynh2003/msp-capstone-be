@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using MSP.Application.Models.Requests.Notification;
 using MSP.Application.Models.Responses.OrganizationInvitation;
 using MSP.Application.Repositories;
+using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
@@ -19,12 +21,19 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
     {
         private readonly IOrganizationInviteRepository _organizationInviteRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
+        private readonly INotificationService _notificationService;
         private readonly UserManager<User> _userManager;
-        public OrganizationInvitationService(IOrganizationInviteRepository organizationInviteRepository, UserManager<User> userManager, IProjectMemberRepository projectMemberRepository)
+
+        public OrganizationInvitationService(
+            IOrganizationInviteRepository organizationInviteRepository,
+            UserManager<User> userManager,
+            IProjectMemberRepository projectMemberRepository,
+            INotificationService notificationService)
         {
             _organizationInviteRepository = organizationInviteRepository;
             _userManager = userManager;
             _projectMemberRepository = projectMemberRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse<string>> BusinessOwnerAcceptRequestAsync(Guid businessOwnerId, Guid invitationId)
@@ -90,6 +99,44 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     await _organizationInviteRepository.UpdateRangeAsync(otherPendingInvitations);
                 }
 
+                // 8. Send notification to member
+                try
+                {
+                    var notificationRequest = new CreateNotificationRequest
+                    {
+                        UserId = member.Id,
+                        ActorId = businessOwner.Id,
+                        Title = "Join Request Accepted",
+                        Message = $"{businessOwner.FullName} has accepted your request to join {businessOwner.Organization}. Welcome aboard!",
+                        Type = NotificationTypeEnum.InApp.ToString(),
+                        EntityId = request.Id.ToString(),
+                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            InvitationId = request.Id,
+                            OrganizationName = businessOwner.Organization,
+                            BusinessOwnerName = businessOwner.FullName,
+                            BusinessOwnerId = businessOwner.Id,
+                            EventType = "RequestAccepted"
+                        })
+                    };
+
+                    await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                    // Send email notification
+                    _notificationService.SendEmailNotification(
+                        member.Email!,
+                        "Join Request Accepted",
+                        $"Hi {member.FullName},<br/><br/>" +
+                        $"Great news! {businessOwner.FullName} has accepted your request to join <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                        $"You are now part of the organization and can start collaborating with your team.<br/><br/>" +
+                        $"Welcome aboard!");
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the operation
+                    Console.WriteLine($"Failed to send notification: {ex.Message}");
+                }
+
                 return ApiResponse<string>.SuccessResponse(
                     $"{member.FullName} has been added to your organization. {otherPendingInvitations.Count} other pending invitation(s) have been canceled.",
                     "Request accepted successfully.");
@@ -123,7 +170,47 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 request.RespondedAt = DateTime.UtcNow;
                 await _organizationInviteRepository.UpdateAsync(request);
 
-                // (Optional) Gửi notification cho member (Chưa handle)
+                // 4. Send notification to member
+                try
+                {
+                    var member = request.Member;
+                    var businessOwner = request.BusinessOwner;
+
+                    if (member != null && businessOwner != null)
+                    {
+                        var notificationRequest = new CreateNotificationRequest
+                        {
+                            UserId = member.Id,
+                            ActorId = businessOwner.Id,
+                            Title = "Join Request Declined",
+                            Message = $"Your request to join {businessOwner.Organization} has been declined by {businessOwner.FullName}.",
+                            Type = NotificationTypeEnum.InApp.ToString(),
+                            EntityId = request.Id.ToString(),
+                            Data = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                InvitationId = request.Id,
+                                OrganizationName = businessOwner.Organization,
+                                BusinessOwnerName = businessOwner.FullName,
+                                BusinessOwnerId = businessOwner.Id,
+                                EventType = "RequestRejected"
+                            })
+                        };
+
+                        await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                        // Send email notification
+                        _notificationService.SendEmailNotification(
+                            member.Email!,
+                            "Join Request Declined",
+                            $"Hi {member.FullName},<br/><br/>" +
+                            $"Unfortunately, {businessOwner.FullName} has declined your request to join <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                            $"You may contact the organization administrator for more information.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to send notification: {ex.Message}");
+                }
 
                 return ApiResponse<string>.SuccessResponse(
                     "Join request has been rejected.",
@@ -341,6 +428,43 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     await _organizationInviteRepository.UpdateRangeAsync(otherPendingInvitations);
                 }
 
+                // 8. Send notification to business owner
+                try
+                {
+                    var notificationRequest = new CreateNotificationRequest
+                    {
+                        UserId = businessOwner.Id,
+                        ActorId = member.Id,
+                        Title = "Invitation Accepted",
+                        Message = $"{member.FullName} has accepted your invitation and joined {businessOwner.Organization}.",
+                        Type = NotificationTypeEnum.InApp.ToString(),
+                        EntityId = invitation.Id.ToString(),
+                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            InvitationId = invitation.Id,
+                            MemberName = member.FullName,
+                            MemberEmail = member.Email,
+                            MemberId = member.Id,
+                            OrganizationName = businessOwner.Organization,
+                            EventType = "InvitationAccepted"
+                        })
+                    };
+
+                    await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                    // Send email notification
+                    _notificationService.SendEmailNotification(
+                        businessOwner.Email!,
+                        "Invitation Accepted",
+                        $"Hi {businessOwner.FullName},<br/><br/>" +
+                        $"<strong>{member.FullName}</strong> has accepted your invitation and is now part of your organization <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                        $"You can now add them to projects and start collaborating.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to send notification: {ex.Message}");
+                }
+
                 return ApiResponse<string>.SuccessResponse(
                     $"Successfully joined {businessOwner.Organization}. {otherPendingInvitations.Count} other pending invitation(s) have been canceled.",
                     "Invitation accepted successfully.");
@@ -412,6 +536,48 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 invitation.RespondedAt = DateTime.UtcNow;
                 await _organizationInviteRepository.UpdateAsync(invitation);
 
+                // 4. Send notification to business owner
+                try
+                {
+                    var member = invitation.Member;
+                    var businessOwner = invitation.BusinessOwner;
+
+                    if (member != null && businessOwner != null)
+                    {
+                        var notificationRequest = new CreateNotificationRequest
+                        {
+                            UserId = businessOwner.Id,
+                            ActorId = member.Id,
+                            Title = "Invitation Declined",
+                            Message = $"{member.FullName} has declined your invitation to join {businessOwner.Organization}.",
+                            Type = NotificationTypeEnum.InApp.ToString(),
+                            EntityId = invitation.Id.ToString(),
+                            Data = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                InvitationId = invitation.Id,
+                                MemberName = member.FullName,
+                                MemberEmail = member.Email,
+                                MemberId = member.Id,
+                                OrganizationName = businessOwner.Organization,
+                                EventType = "InvitationRejected"
+                            })
+                        };
+
+                        await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                        // Send email notification
+                        _notificationService.SendEmailNotification(
+                            businessOwner.Email!,
+                            "Invitation Declined",
+                            $"Hi {businessOwner.FullName},<br/><br/>" +
+                            $"<strong>{member.FullName}</strong> has declined your invitation to join <strong>{businessOwner.Organization}</strong>.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to send notification: {ex.Message}");
+                }
+
                 return ApiResponse<string>.SuccessResponse(
                     $"You have rejected the invitation from business.",
                     "Invitation rejected successfully.");
@@ -445,6 +611,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             {
                 return ApiResponse<bool>.ErrorResponse(false, "Business owner not found.");
             }
+            
             //Check businessOwner role
             var roles = await _userManager.GetRolesAsync(businessOwner);
             if (!roles.Contains("BusinessOwner"))
@@ -458,14 +625,15 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             {
                 return ApiResponse<bool>.ErrorResponse(false, "An invitation already exists.");
             }
+            
             // Create new invitation
             var invitation = new Domain.Entities.OrganizationInvitation
             {
                 BusinessOwnerId = businessOwnerId,
                 MemberId = memberId,
-                Status = Shared.Enums.InvitationStatus.Pending,
+                Status = InvitationStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
-                Type = Shared.Enums.InvitationType.Request
+                Type = InvitationType.Request
             };
 
             var rs = await _organizationInviteRepository.AddAsync(invitation);
@@ -473,6 +641,44 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             {
                 return ApiResponse<bool>.ErrorResponse(false, "Failed to send request to join organization.");
             }
+
+            // Send notification to business owner
+            try
+            {
+                var notificationRequest = new CreateNotificationRequest
+                {
+                    UserId = businessOwner.Id,
+                    ActorId = member.Id,
+                    Title = "New Join Request",
+                    Message = $"{member.FullName} has requested to join your organization {businessOwner.Organization}.",
+                    Type = NotificationTypeEnum.InApp.ToString(),
+                    EntityId = invitation.Id.ToString(),
+                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        InvitationId = invitation.Id,
+                        MemberName = member.FullName,
+                        MemberEmail = member.Email,
+                        MemberId = member.Id,
+                        OrganizationName = businessOwner.Organization,
+                        EventType = "JoinRequest"
+                    })
+                };
+
+                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                // Send email notification
+                _notificationService.SendEmailNotification(
+                    businessOwner.Email!,
+                    "New Join Request",
+                    $"Hi {businessOwner.FullName},<br/><br/>" +
+                    $"<strong>{member.FullName}</strong> ({member.Email}) has requested to join your organization <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                    $"Please review and respond to this request in your dashboard.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send notification: {ex.Message}");
+            }
+
             return ApiResponse<bool>.SuccessResponse(true, "Request to join organization sent successfully.");
         }
 
@@ -484,6 +690,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             {
                 return ApiResponse<bool>.ErrorResponse(false, "Business owner not found.");
             }
+            
             // Verify businessOwner has BusinessOwner role
             var roles = await _userManager.GetRolesAsync(businessOwner);
             if (!roles.Contains(UserRoleEnum.BusinessOwner.ToString()))
@@ -491,6 +698,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 return ApiResponse<bool>.ErrorResponse(false,
                     "You must be a business owner to send invitations.");
             }
+            
             // Validate business owner has organization
             if (string.IsNullOrEmpty(businessOwner.Organization))
             {
@@ -505,6 +713,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 return ApiResponse<bool>.ErrorResponse(false,
                     $"No user found with email: {memberEmail}");
             }
+            
             // Verify member has Member role
             var memberRoles = await _userManager.GetRolesAsync(member);
             if (!memberRoles.Contains(UserRoleEnum.Member.ToString()))
@@ -516,8 +725,6 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             // Check if member already has organization
             if (!string.IsNullOrEmpty(member.Organization))
             {
-                //return ApiResponse<bool>.ErrorResponse(false,
-                //    "This user is already part of an organization.");
                 if (member.ManagedById == businessOwnerId)
                 {
                     return ApiResponse<bool>.ErrorResponse(false,
@@ -549,14 +756,49 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 Type = InvitationType.Invite
             };
 
-            // TODO: Send email notification to member
-            // await _emailService.SendInvitationEmailAsync(member.Email, businessOwner.Organization);
-
             var result = await _organizationInviteRepository.AddAsync(invitation);
             if (!result)
             {
                 return ApiResponse<bool>.ErrorResponse(false, "Failed to send invitation.");
             }
+
+            // Send notification to member
+            try
+            {
+                var notificationRequest = new CreateNotificationRequest
+                {
+                    UserId = member.Id,
+                    ActorId = businessOwner.Id,
+                    Title = "Organization Invitation",
+                    Message = $"{businessOwner.FullName} has invited you to join {businessOwner.Organization}.",
+                    Type = NotificationTypeEnum.InApp.ToString(),
+                    EntityId = invitation.Id.ToString(),
+                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        InvitationId = invitation.Id,
+                        OrganizationName = businessOwner.Organization,
+                        BusinessOwnerName = businessOwner.FullName,
+                        BusinessOwnerEmail = businessOwner.Email,
+                        BusinessOwnerId = businessOwner.Id,
+                        EventType = "OrganizationInvitation"
+                    })
+                };
+
+                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+
+                // Send email notification
+                _notificationService.SendEmailNotification(
+                    member.Email!,
+                    "Organization Invitation",
+                    $"Hi {member.FullName},<br/><br/>" +
+                    $"You have been invited by <strong>{businessOwner.FullName}</strong> to join the organization <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                    $"Please log in to your dashboard to accept or decline this invitation.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send notification: {ex.Message}");
+            }
+
             return ApiResponse<bool>.SuccessResponse(true, "Invitation sent successfully.");
         }
 
@@ -578,6 +820,5 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 "Invitations processed."
             );
         }
-
     }
 }
