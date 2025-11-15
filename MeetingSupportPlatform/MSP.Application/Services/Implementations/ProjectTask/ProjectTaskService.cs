@@ -461,11 +461,6 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
             if (request.UserId != null)
             {
-                if (oldUserId == request.UserId)
-                {
-                    // Nếu user không thay đổi, không tạo lịch sử
-                    return ApiResponse<GetTaskResponse>.SuccessResponse(null, "Task updated successfully");
-                }
                 if (oldUserId != request.UserId)
                 {
                     var newTaskHistory = new CreateTaskHistoryRequest
@@ -476,8 +471,6 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                     };
                     await _taskHistoryService.CreateTaskHistoryAsync(newTaskHistory);
                 }
-
-
             }
             
             var response = new GetTaskResponse
