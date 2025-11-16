@@ -1,11 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MSP.Application.Models.Requests.ProjectTask;
-using MSP.Application.Models.Requests.TaskReassignRequest;
 using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Models.Responses.Milestone;
 using MSP.Application.Models.Responses.ProjectTask;
-using MSP.Application.Models.Responses.TaskHistory;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.ProjectTask;
 using MSP.Application.Services.Interfaces.Notification;
@@ -84,54 +82,69 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 }
             }
 
-            await _projectTaskRepository.AddAsync(newTask);
-            await _projectTaskRepository.SaveChangesAsync();
-
-            // Gửi notification nếu task được assign cho user
-            if (request.UserId.HasValue && user != null)
+            using var transaction = await _projectTaskRepository.BeginTransactionAsync();
+            try
             {
-                var notificationRequest = new CreateNotificationRequest
+                await _projectTaskRepository.AddAsync(newTask);
+                await _projectTaskRepository.SaveChangesAsync();
+
+                // AUTO TRACK: Tạo history cho task creation
+                await _taskHistoryService.TrackTaskCreationAsync(
+                    newTask.Id,
+                    request.ActorId,
+                    request.UserId);
+
+                // AUTO TRACK: Nếu có assign ngay từ đầu
+                if (request.UserId.HasValue)
                 {
-                    UserId = request.UserId.Value,
-                    ActorId = request.ActorId,
-                    Title = "Công việc mới được giao",
-                    Message = $"Bạn đã được giao công việc: {newTask.Title} trong dự án {project.Name}",
-                    Type = NotificationTypeEnum.TaskAssignment.ToString(),
-                    EntityId = newTask.Id.ToString(),
-                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    await _taskHistoryService.TrackTaskAssignmentAsync(
+                        newTask.Id,
+                        null, // fromUserId = null (first assignment)
+                        request.UserId.Value,
+                        request.ActorId);
+                }
+
+                await _projectTaskRepository.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Gửi notification nếu task được assign cho user
+                if (request.UserId.HasValue && user != null)
+                {
+                    var notificationRequest = new CreateNotificationRequest
                     {
-                        TaskId = newTask.Id,
-                        TaskTitle = newTask.Title,
-                        ProjectId = project.Id,
-                        ProjectName = project.Name,
-                        DueDate = newTask.EndDate
-                    })
-                };
+                        UserId = request.UserId.Value,
+                        ActorId = request.ActorId,
+                        Title = "Công việc mới được giao",
+                        Message = $"Bạn đã được giao công việc: {newTask.Title} trong dự án {project.Name}",
+                        Type = NotificationTypeEnum.TaskAssignment.ToString(),
+                        EntityId = newTask.Id.ToString(),
+                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            TaskId = newTask.Id,
+                            TaskTitle = newTask.Title,
+                            ProjectId = project.Id,
+                            ProjectName = project.Name,
+                            DueDate = newTask.EndDate
+                        })
+                    };
 
-                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+                    await _notificationService.CreateInAppNotificationAsync(notificationRequest);
 
-                // Gửi email notification (async via Hangfire)
-                _notificationService.SendEmailNotification(
-                    user.Email!,
-                    "Công việc mới được giao",
-                    $"Xin chào {user.FullName},<br/><br/>" +
-                    $"Bạn đã được giao công việc mới: <strong>{newTask.Title}</strong><br/>" +
-                    $"Dự án: {project.Name}<br/>" +
-                    $"Hạn chót: {newTask.EndDate:dd/MM/yyyy}<br/><br/>" +
-                    $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết."
-                );
+                    _notificationService.SendEmailNotification(
+                        user.Email!,
+                        "Công việc mới được giao",
+                        $"Xin chào {user.FullName},<br/><br/>" +
+                        $"Bạn đã được giao công việc mới: <strong>{newTask.Title}</strong><br/>" +
+                        $"Dự án: {project.Name}<br/>" +
+                        $"Hạn chót: {newTask.EndDate:dd/MM/yyyy}<br/><br/>" +
+                        $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết."
+                    );
+                }
             }
-
-            // Tạo TaskHistory nếu có UserId
-            if (request.UserId != null)
+            catch (Exception)
             {
-                var newTaskHistory = new CreateTaskHistoryRequest
-                {
-                    TaskId = newTask.Id,
-                    FromUserId = null,
-                    ToUserId = request.UserId.Value
-                };
-                await _taskHistoryService.CreateTaskHistoryAsync(newTaskHistory);
+                await transaction.RollbackAsync();
+                throw;
             }
 
             var response = new GetTaskResponse
@@ -358,125 +371,197 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Project not found or has been deleted");
             }
 
-            // Lưu UserId cũ để so sánh
+            // Lưu giá trị cũ để track changes
+            var oldTitle = task.Title;
+            var oldDescription = task.Description;
+            var oldStatus = task.Status;
+            var oldStartDate = task.StartDate;
+            var oldEndDate = task.EndDate;
             var oldUserId = task.UserId;
 
-            User? user = null;
+            User? newUser = null;
             if (request.UserId.HasValue)
             {
-                user = await _userManager.FindByIdAsync(request.UserId.Value.ToString());
-                if (user == null)
+                newUser = await _userManager.FindByIdAsync(request.UserId.Value.ToString());
+                if (newUser == null)
                 {
                     return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");
                 }
             }
 
-            task.Title = request.Title;
-            task.Description = request.Description;
-            task.Status = request.Status;
-            task.StartDate = request.StartDate;
-            task.EndDate = request.EndDate;
-            task.UserId = request.UserId;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            // Cập nhật milestones (xóa các milestone hiện tại, gán milestones mới)
-            if (request.MilestoneIds != null)
+            // Bắt đầu transaction
+            using var transaction = await _projectTaskRepository.BeginTransactionAsync();
+            try
             {
-                var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
-                if (milestones == null || milestones.Count() != request.MilestoneIds.Length || milestones.Any(m => m.IsDeleted))
+                // AUTO TRACK: Title change
+                if (!string.IsNullOrEmpty(request.Title) && task.Title != request.Title)
                 {
-                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found or have been deleted");
+                    await _taskHistoryService.TrackFieldChangeAsync(
+                        task.Id,
+                        "Title",
+                        oldTitle,
+                        request.Title,
+                        request.ActorId);
+                    task.Title = request.Title;
                 }
 
-                // Xóa các milestones cũ
-                task.Milestones.Clear();
-                // Thêm milestones mới
-                foreach (var milestone in milestones)
+                // AUTO TRACK: Description change
+                if (!string.IsNullOrEmpty(request.Description) && task.Description != request.Description)
                 {
-                    _milestoneRepository.Attach(milestone);
-                    task.Milestones.Add(milestone);
-                }
-            }
-
-            await _projectTaskRepository.UpdateAsync(task);
-            await _projectTaskRepository.SaveChangesAsync();
-
-            // Gửi notification nếu task được assign/reassign cho user khác
-            if (request.UserId.HasValue && request.UserId != oldUserId && user != null)
-            {
-                string notificationTitle;
-                string notificationMessage;
-                string emailSubject;
-                string emailBody;
-
-                if (oldUserId.HasValue)
-                {
-                    // Task được reassign từ user khác
-                    notificationTitle = "Công việc được giao lại";
-                    notificationMessage = $"Công việc '{task.Title}' đã được giao lại cho bạn trong dự án {project.Name}";
-                    emailSubject = "Công việc được giao lại";
-                    emailBody = $"Xin chào {user.FullName},<br/><br/>" +
-                               $"Công việc <strong>{task.Title}</strong> đã được giao lại cho bạn.<br/>" +
-                               $"Dự án: {project.Name}<br/>" +
-                               $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
-                               $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
-                }
-                else
-                {
-                    // Task được assign lần đầu
-                    notificationTitle = "Công việc mới được giao";
-                    notificationMessage = $"Bạn đã được giao công việc: {task.Title} trong dự án {project.Name}";
-                    emailSubject = "Công việc mới được giao";
-                    emailBody = $"Xin chào {user.FullName},<br/><br/>" +
-                               $"Bạn đã được giao công việc mới: <strong>{task.Title}</strong><br/>" +
-                               $"Dự án: {project.Name}<br/>" +
-                               $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
-                               $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
+                    await _taskHistoryService.TrackFieldChangeAsync(
+                        task.Id,
+                        "Description",
+                        oldDescription,
+                        request.Description,
+                        request.ActorId);
+                    task.Description = request.Description;
                 }
 
-                var notificationRequest = new CreateNotificationRequest
+                // AUTO TRACK: Status change
+                if (!string.IsNullOrEmpty(request.Status) && task.Status != request.Status)
                 {
-                    UserId = request.UserId.Value,
-                    ActorId = request.ActorId,
-                    Title = notificationTitle,
-                    Message = notificationMessage,
-                    Type = NotificationTypeEnum.TaskAssignment.ToString(),
-                    EntityId = task.Id.ToString(),
-                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                    await _taskHistoryService.TrackStatusChangeAsync(
+                        task.Id,
+                        oldStatus,
+                        request.Status,
+                        request.ActorId);
+                    task.Status = request.Status;
+                }
+
+                // AUTO TRACK: StartDate change
+                if (request.StartDate.HasValue && task.StartDate != request.StartDate.Value)
+                {
+                    await _taskHistoryService.TrackFieldChangeAsync(
+                        task.Id,
+                        "StartDate",
+                        oldStartDate?.ToString("dd/MM/yyyy"),
+                        request.StartDate.Value.ToString("dd/MM/yyyy"),
+                        request.ActorId);
+                    task.StartDate = request.StartDate.Value;
+                }
+
+                // AUTO TRACK: EndDate change
+                if (request.EndDate.HasValue && task.EndDate != request.EndDate.Value)
+                {
+                    await _taskHistoryService.TrackFieldChangeAsync(
+                        task.Id,
+                        "EndDate",
+                        oldEndDate?.ToString("dd/MM/yyyy"),
+                        request.EndDate.Value.ToString("dd/MM/yyyy"),
+                        request.ActorId);
+                    task.EndDate = request.EndDate.Value;
+                }
+
+                // AUTO TRACK: Assignment/Reassignment
+                if (request.UserId != oldUserId)
+                {
+                    if (oldUserId.HasValue && request.UserId.HasValue)
                     {
-                        TaskId = task.Id,
-                        TaskTitle = task.Title,
-                        ProjectId = project.Id,
-                        ProjectName = project.Name,
-                        DueDate = task.EndDate,
-                        IsReassignment = oldUserId.HasValue
-                    })
-                };
-
-                await _notificationService.CreateInAppNotificationAsync(notificationRequest);
-
-                // Gửi email notification (async via Hangfire)
-                _notificationService.SendEmailNotification(
-                    user.Email!,
-                    emailSubject,
-                    emailBody
-                );
-            }
-
-            if (request.UserId != null)
-            {
-                if (oldUserId != request.UserId)
-                {
-                    var newTaskHistory = new CreateTaskHistoryRequest
+                        // Reassignment
+                        await _taskHistoryService.TrackTaskAssignmentAsync(
+                            task.Id,
+                            oldUserId.Value,
+                            request.UserId.Value,
+                            request.ActorId);
+                    }
+                    else if (request.UserId.HasValue)
                     {
-                        TaskId = request.Id,
-                        FromUserId = oldUserId,
-                        ToUserId = request.UserId.Value
+                        // First assignment
+                        await _taskHistoryService.TrackTaskAssignmentAsync(
+                            task.Id,
+                            null,
+                            request.UserId.Value,
+                            request.ActorId);
+                    }
+                    // Note: Không track khi unassign (UserId từ có → null)
+
+                    task.UserId = request.UserId;
+                }
+
+                task.UpdatedAt = DateTime.UtcNow;
+
+                // Cập nhật milestones
+                if (request.MilestoneIds != null)
+                {
+                    var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
+                    if (milestones == null || milestones.Count() != request.MilestoneIds.Length || milestones.Any(m => m.IsDeleted))
+                    {
+                        await transaction.RollbackAsync();
+                        return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Some milestones not found or have been deleted");
+                    }
+
+                    task.Milestones.Clear();
+                    foreach (var milestone in milestones)
+                    {
+                        _milestoneRepository.Attach(milestone);
+                        task.Milestones.Add(milestone);
+                    }
+                }
+
+                await _projectTaskRepository.UpdateAsync(task);
+                await _projectTaskRepository.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Gửi notification nếu task được assign/reassign
+                if (request.UserId.HasValue && request.UserId != oldUserId && newUser != null)
+                {
+                    string notificationTitle;
+                    string notificationMessage;
+                    string emailSubject;
+                    string emailBody;
+
+                    if (oldUserId.HasValue)
+                    {
+                        notificationTitle = "Công việc được giao lại";
+                        notificationMessage = $"Công việc '{task.Title}' đã được giao lại cho bạn trong dự án {project.Name}";
+                        emailSubject = "Công việc được giao lại";
+                        emailBody = $"Xin chào {newUser.FullName},<br/><br/>" +
+                                   $"Công việc <strong>{task.Title}</strong> đã được giao lại cho bạn.<br/>" +
+                                   $"Dự án: {project.Name}<br/>" +
+                                   $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                                   $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
+                    }
+                    else
+                    {
+                        notificationTitle = "Công việc mới được giao";
+                        notificationMessage = $"Bạn đã được giao công việc: {task.Title} trong dự án {project.Name}";
+                        emailSubject = "Công việc mới được giao";
+                        emailBody = $"Xin chào {newUser.FullName},<br/><br/>" +
+                                   $"Bạn đã được giao công việc mới: <strong>{task.Title}</strong><br/>" +
+                                   $"Dự án: {project.Name}<br/>" +
+                                   $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                                   $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
+                    }
+
+                    var notificationRequest = new CreateNotificationRequest
+                    {
+                        UserId = request.UserId.Value,
+                        ActorId = request.ActorId,
+                        Title = notificationTitle,
+                        Message = notificationMessage,
+                        Type = NotificationTypeEnum.TaskAssignment.ToString(),
+                        EntityId = task.Id.ToString(),
+                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            TaskId = task.Id,
+                            TaskTitle = task.Title,
+                            ProjectId = project.Id,
+                            ProjectName = project.Name,
+                            DueDate = task.EndDate,
+                            IsReassignment = oldUserId.HasValue
+                        })
                     };
-                    await _taskHistoryService.CreateTaskHistoryAsync(newTaskHistory);
+
+                    await _notificationService.CreateInAppNotificationAsync(notificationRequest);
+                    _notificationService.SendEmailNotification(newUser.Email!, emailSubject, emailBody);
                 }
             }
-            
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
             var response = new GetTaskResponse
             {
                 Id = task.Id,

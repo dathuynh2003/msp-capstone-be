@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using MSP.Application.Models.Requests.Project;
+﻿using Microsoft.AspNetCore.Mvc;
 using MSP.Application.Models.Requests.ProjectTask;
 using MSP.Application.Services.Interfaces.ProjectTask;
-using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
 namespace MSP.WebAPI.Controllers

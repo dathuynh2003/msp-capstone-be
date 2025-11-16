@@ -1,13 +1,6 @@
-﻿using MSP.Application.Models.Requests.TaskReassignRequest;
-using MSP.Application.Models.Responses.Auth;
+﻿using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Models.Responses.TaskHistory;
-using MSP.Domain.Entities;
 using MSP.Shared.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MSP.Application.Services.Interfaces.TaskHistory
 {
@@ -15,6 +8,30 @@ namespace MSP.Application.Services.Interfaces.TaskHistory
     {
         Task<ApiResponse<IEnumerable<GetUserResponse>>> GetAvailableUsersForReassignmentAsync(Guid taskId, Guid fromUserId);
         Task<ApiResponse<IEnumerable<GetTaskHistoryResponse>>> GetTaskHistoriesByTaskIdAsync(Guid taskId);
-        Task<ApiResponse<GetTaskHistoryResponse>> CreateTaskHistoryAsync(CreateTaskHistoryRequest request);
+
+        // Internal methods - dùng bởi ProjectTaskService để tự động tạo history
+        Task<MSP.Domain.Entities.TaskHistory> TrackTaskCreationAsync(
+            Guid taskId,
+            Guid createdByUserId,
+            Guid? assignedToUserId);
+
+        Task<MSP.Domain.Entities.TaskHistory> TrackTaskAssignmentAsync(
+            Guid taskId,
+            Guid? fromUserId,
+            Guid toUserId,
+            Guid changedByUserId);
+
+        Task<MSP.Domain.Entities.TaskHistory> TrackFieldChangeAsync(
+            Guid taskId,
+            string fieldName,
+            string? oldValue,
+            string? newValue,
+            Guid changedByUserId);
+
+        Task<MSP.Domain.Entities.TaskHistory> TrackStatusChangeAsync(
+            Guid taskId,
+            string oldStatus,
+            string newStatus,
+            Guid changedByUserId);
     }
 }

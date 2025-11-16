@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using MSP.Domain.Base;
-using MSP.Shared.Common;
+using Microsoft.EntityFrameworkCore.Storage;
 using MSP.Application.Abstracts;
+using MSP.Domain.Base;
 using MSP.Infrastructure.Persistence.DBContext;
+using MSP.Shared.Common;
 using System.Linq.Expressions;
 
 namespace MSP.Infrastructure.Repositories
@@ -384,6 +385,11 @@ namespace MSP.Infrastructure.Repositories
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
     }
 }

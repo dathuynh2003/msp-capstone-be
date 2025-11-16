@@ -1,5 +1,6 @@
-﻿using System.Linq.Expressions;
+﻿using Microsoft.EntityFrameworkCore.Storage;
 using MSP.Shared.Common;
+using System.Linq.Expressions;
 
 namespace MSP.Application.Abstracts
 {
@@ -87,5 +88,7 @@ namespace MSP.Application.Abstracts
             int pageNumber = 1,
             int pageSize = 10,
             bool asNoTracking = true);
+
+        Task<IDbContextTransaction> BeginTransactionAsync();
     }
 }

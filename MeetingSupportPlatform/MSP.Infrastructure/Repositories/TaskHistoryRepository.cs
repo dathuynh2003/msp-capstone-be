@@ -2,12 +2,6 @@
 using MSP.Application.Repositories;
 using MSP.Domain.Entities;
 using MSP.Infrastructure.Persistence.DBContext;
-using MSP.Shared.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MSP.Infrastructure.Repositories
 {
@@ -20,6 +14,7 @@ namespace MSP.Infrastructure.Repositories
                 .Include(th => th.Task)
                 .Include(th => th.FromUser)
                 .Include(th => th.ToUser)
+                .Include(th => th.ChangedBy)
                 .FirstOrDefaultAsync(th => th.Id == id);
         }
 
@@ -29,11 +24,11 @@ namespace MSP.Infrastructure.Repositories
                 .Include(th => th.Task)
                 .Include(th => th.FromUser)
                 .Include(th => th.ToUser)
+                .Include(th => th.ChangedBy)
                 .Where(th => th.TaskId == taskId)
                 .OrderByDescending(th => th.CreatedAt)
                 .ToListAsync();
 
         }
-
     }
 }

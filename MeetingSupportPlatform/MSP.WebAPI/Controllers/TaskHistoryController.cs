@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using MSP.Application.Models.Requests.TaskReassignRequest;
+﻿using Microsoft.AspNetCore.Mvc;
 using MSP.Application.Services.Interfaces.TaskHistory;
 
 namespace MSP.WebAPI.Controllers

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using MSP.Application.Models.Requests.TaskReassignRequest;
 using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Models.Responses.ProjectTask;
 using MSP.Application.Models.Responses.TaskHistory;
@@ -8,11 +7,6 @@ using MSP.Application.Services.Interfaces.TaskHistory;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 using MSP.Shared.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MSP.Application.Services.Implementations.TaskHistory
 {
@@ -34,64 +28,101 @@ namespace MSP.Application.Services.Implementations.TaskHistory
             _userManager = userManager;
         }
 
-
-        public async Task<ApiResponse<GetTaskHistoryResponse>> CreateTaskHistoryAsync(CreateTaskHistoryRequest request)
+        /// <summary>
+        /// Track when creating a new task
+        /// </summary>
+        public async Task<MSP.Domain.Entities.TaskHistory> TrackTaskCreationAsync(
+            Guid taskId,
+            Guid createdByUserId,
+            Guid? assignedToUserId)
         {
-            var task = await _taskRepo.GetByIdAsync(request.TaskId);
-            if (task == null)
-                return ApiResponse<GetTaskHistoryResponse>.ErrorResponse(null, "Task not found");
-            var fromUser = null as User;
-            if (request.FromUserId != null)
-                fromUser = await _userManager.FindByIdAsync(request.FromUserId.ToString());
-            var toUser = await _userManager.FindByIdAsync(request.ToUserId.ToString());
-            if (toUser == null)
-                return ApiResponse<GetTaskHistoryResponse>.ErrorResponse(null, "ToUser not found");
-            var taskHistory = new MSP.Domain.Entities.TaskHistory
+            var history = new MSP.Domain.Entities.TaskHistory
             {
-                TaskId = request.TaskId,
-                FromUserId = request.FromUserId,
-                ToUserId = request.ToUserId,
-                CreatedAt = DateTime.UtcNow,
+                TaskId = taskId,
+                Action = TaskHistoryAction.Created.ToString(),
+                ChangedById = createdByUserId,
+                ToUserId = assignedToUserId,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            };
-            await _taskHistoryRepo.AddAsync(taskHistory);
-            await _taskHistoryRepo.SaveChangesAsync();
-            var rs = new GetTaskHistoryResponse
+            await _taskHistoryRepo.AddAsync(history);
+            return history;
+        }
+
+        /// <summary>
+        /// Track when assigning/reassigning task
+        /// </summary>
+        public async Task<MSP.Domain.Entities.TaskHistory> TrackTaskAssignmentAsync(
+            Guid taskId,
+            Guid? fromUserId,
+            Guid toUserId,
+            Guid changedByUserId)
+        {
+            var action = fromUserId == null
+                ? TaskHistoryAction.Assigned
+                : TaskHistoryAction.Reassigned;
+
+            var history = new MSP.Domain.Entities.TaskHistory
             {
-                TaskId = request.TaskId,
-                FromUserId = request.FromUserId,
-                ToUserId = request.ToUserId,
-                Task = new GetTaskResponse
-                {
-                    Id = task.Id,
-                    Title = task.Title,
-                    Description = task.Description,
-                    StartDate = task.StartDate,
-                    EndDate = task.EndDate,
-                    Status = task.Status,
-                    UserId = task.UserId,
-                    ProjectId = task.ProjectId
-                },
-                FromUser = fromUser == null ? null : new GetUserResponse
-                {
-                    Id = fromUser.Id,
-                    UserName = fromUser.UserName,
-                    FullName = fromUser.FullName,
-                    Email = fromUser.Email,
-                    AvatarUrl = fromUser.AvatarUrl,
-                    PhoneNumber = fromUser.PhoneNumber
-                },
-                ToUser = new GetUserResponse
-                {
-                    Id = toUser.Id,
-                    UserName = toUser.UserName,
-                    FullName = toUser.FullName,
-                    Email = toUser.Email,
-                    AvatarUrl = toUser.AvatarUrl,
-                    PhoneNumber = toUser.PhoneNumber
-                },
+                TaskId = taskId,
+                Action = action.ToString(),
+                FromUserId = fromUserId,
+                ToUserId = toUserId,
+                ChangedById = changedByUserId,
+                CreatedAt = DateTime.UtcNow
             };
-            return ApiResponse<GetTaskHistoryResponse>.SuccessResponse(rs, "Create task history successfully");
+
+            await _taskHistoryRepo.AddAsync(history);
+            return history;
+        }
+
+        /// <summary>
+        /// Track when change fields (Title, Description, StartDate, EndDate...)
+        /// </summary>
+        public async Task<MSP.Domain.Entities.TaskHistory> TrackFieldChangeAsync(
+            Guid taskId,
+            string fieldName,
+            string? oldValue,
+            string? newValue,
+            Guid changedByUserId)
+        {
+            var history = new MSP.Domain.Entities.TaskHistory
+            {
+                TaskId = taskId,
+                Action = TaskHistoryAction.Updated.ToString(),
+                FieldName = fieldName,
+                OldValue = oldValue,
+                NewValue = newValue,
+                ChangedById = changedByUserId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _taskHistoryRepo.AddAsync(history);
+            return history;
+        }
+
+        /// <summary>
+        /// Track when change status
+        /// </summary>
+        public async Task<MSP.Domain.Entities.TaskHistory> TrackStatusChangeAsync(
+            Guid taskId,
+            string oldStatus,
+            string newStatus,
+            Guid changedByUserId)
+        {
+            var history = new MSP.Domain.Entities.TaskHistory
+            {
+                TaskId = taskId,
+                Action = TaskHistoryAction.StatusChanged.ToString(),
+                FieldName = "Status",
+                OldValue = oldStatus,
+                NewValue = newStatus,
+                ChangedById = changedByUserId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _taskHistoryRepo.AddAsync(history);
+            return history;
         }
 
         public async Task<ApiResponse<IEnumerable<GetUserResponse>>> GetAvailableUsersForReassignmentAsync(Guid taskId, Guid fromUserId)
@@ -159,15 +190,21 @@ namespace MSP.Application.Services.Implementations.TaskHistory
                 TaskId = trr.TaskId,
                 FromUserId = trr.FromUserId,
                 ToUserId = trr.ToUserId,
-                AssignedAt = trr.CreatedAt,
-                Task = new GetTaskResponse
+                Action = trr.Action,
+                ChangedById = trr.ChangedById,
+                FieldName = trr.FieldName,
+                OldValue = trr.OldValue,
+                NewValue = trr.NewValue,
+                CreatedAt = trr.CreatedAt,
+                Task = trr.Task == null ? null : new GetTaskResponse
                 {
-                    Id = trr.Task!.Id,
+                    Id = trr.Task.Id,
                     Title = trr.Task.Title,
                     Description = trr.Task.Description,
                     StartDate = trr.Task.StartDate,
                     EndDate = trr.Task.EndDate,
                     Status = trr.Task.Status,
+                    IsOverdue = trr.Task.IsOverdue,
                     UserId = trr.Task.UserId,
                     ProjectId = trr.Task.ProjectId
                 },
@@ -188,6 +225,15 @@ namespace MSP.Application.Services.Implementations.TaskHistory
                     Email = trr.ToUser.Email,
                     AvatarUrl = trr.ToUser.AvatarUrl,
                     PhoneNumber = trr.ToUser.PhoneNumber
+                },
+                ChangedBy = trr.ChangedBy == null ? null : new GetUserResponse
+                {
+                    Id = trr.ChangedBy.Id,
+                    UserName = trr.ChangedBy.UserName,
+                    FullName = trr.ChangedBy.FullName,
+                    Email = trr.ChangedBy.Email,
+                    AvatarUrl = trr.ChangedBy.AvatarUrl,
+                    PhoneNumber = trr.ChangedBy.PhoneNumber
                 }
             });
             return ApiResponse<IEnumerable<GetTaskHistoryResponse>>.SuccessResponse(rs, "Fetch task histories for task successfully");
