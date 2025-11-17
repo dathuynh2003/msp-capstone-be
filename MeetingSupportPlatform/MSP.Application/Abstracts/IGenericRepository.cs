@@ -90,5 +90,7 @@ namespace MSP.Application.Abstracts
             bool asNoTracking = true);
 
         Task<IDbContextTransaction> BeginTransactionAsync();
+
+        IExecutionStrategy CreateExecutionStrategy();
     }
 }

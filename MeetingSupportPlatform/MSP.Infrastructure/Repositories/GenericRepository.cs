@@ -391,5 +391,10 @@ namespace MSP.Infrastructure.Repositories
         {
             return await _context.Database.BeginTransactionAsync();
         }
+
+        public IExecutionStrategy CreateExecutionStrategy()
+        {
+            return _context.Database.CreateExecutionStrategy();
+        }
     }
 }
