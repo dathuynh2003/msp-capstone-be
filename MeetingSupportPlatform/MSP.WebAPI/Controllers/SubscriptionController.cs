@@ -5,7 +5,7 @@ using MSP.Application.Services.Interfaces.Subscription;
 
 namespace MSP.WebAPI.Controllers
 {
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/subscriptions")]
     [ApiController]
     public class SubscriptionController : ControllerBase
     {
@@ -17,24 +17,33 @@ namespace MSP.WebAPI.Controllers
         /// <summary>
         /// API mua package
         /// </summary>
-        [HttpPost("purchase")]
+        [HttpPost]
         public async Task<IActionResult> PurchasePackage([FromBody] CreateSubscriptionRequest request)
         {
-            try
-            {
-                var response = await _subscriptionService.CreateSubscriptionAsync(request);
+            var response = await _subscriptionService.CreateSubscriptionAsync(request);
+            return Ok(response);
+        }
+        [HttpGet("active/{userId}")]
+        public async Task<IActionResult> GetActiveSubscription(Guid userId)
+        {
+            var response = await _subscriptionService.GetActiveSubscriptionByUserIdAsync(userId);
 
-                return Ok(new
-                {
-                    success = true,
-                    data = response,
-                    message = "Vui lòng quét QR hoặc truy cập link để thanh toán"
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
+            if (!response.Success)
+                return NotFound(response);
+
+            return Ok(response);
+        }
+
+
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetSubscriptionsByUser(Guid userId)
+        {
+            var response = await _subscriptionService.GetSubscriptionsByUserIdAsync(userId);
+
+            if (!response.Success)
+                return NotFound(response);
+
+            return Ok(response);
         }
     }
 }

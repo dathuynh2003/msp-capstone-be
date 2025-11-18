@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MSP.Application.Models.Responses.Limitation;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,6 @@ namespace MSP.Application.Models.Responses.Package
         public string Currency { get; set; }
         public int BillingCycle { get; set; }
         public bool isDeleted { get; set; }
-        public ICollection<Guid> LimitationIds { get; set; } = new List<Guid>();
+        public List<GetLimitationResponse> Limitations { get; set; } = new();
     }
 }

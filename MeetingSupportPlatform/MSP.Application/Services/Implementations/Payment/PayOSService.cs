@@ -119,9 +119,19 @@ namespace MSP.Application.Services.Implementations.Payment
 
                 if (code == "00")
                 {
+                    // inactive previous subscriptions if any
+                    var activeOld = await _subscriptionRepository.GetActiveSubscriptionByUserIdAsync(subscription.UserId);
+                    if (activeOld != null && activeOld.Id != subscription.Id)
+                    {
+                        activeOld.IsActive = false;
+                        activeOld.UpdatedAt = DateTime.UtcNow;
+                        await _subscriptionRepository.UpdateAsync(activeOld);
+                    }
+                    //activate current subscription
                     subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
                     subscription.PaidAt = DateTime.Parse(transactionDateTime, null,
                         System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+                    subscription.IsActive = true;
                     subscription.PaymentMethod = "PayOS";
                     subscription.TransactionID = reference;
                     subscription.StartDate = DateTime.UtcNow;
@@ -131,7 +141,6 @@ namespace MSP.Application.Services.Implementations.Payment
                 {
                     _logger.LogWarning("Payment failed or unrecognized code: {Code}", code);
                 }
-
                 subscription.UpdatedAt = DateTime.UtcNow;
                 await _subscriptionRepository.UpdateAsync(subscription);
                 await _subscriptionRepository.SaveChangesAsync();

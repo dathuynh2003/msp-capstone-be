@@ -1,9 +1,10 @@
 ﻿using MSP.Application.Models.Requests.Package;
+using MSP.Application.Models.Responses.Limitation;
 using MSP.Application.Models.Responses.Package;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Package;
-using MSP.Shared.Common;
 using MSP.Domain.Entities;
+using MSP.Shared.Common;
 
 namespace MSP.Application.Services.Implementations.Package
 {
@@ -35,7 +36,16 @@ namespace MSP.Application.Services.Implementations.Package
                     Currency = p.Currency,
                     BillingCycle = p.BillingCycle,
                     isDeleted = p.IsDeleted,
-                    LimitationIds = p.Limitations.Select(x => x.Id).ToList()
+                    Limitations = p.Limitations.Select(l => new GetLimitationResponse
+                    {
+                        Id = l.Id,
+                        Name = l.Name,
+                        Description = l.Description,
+                        IsUnlimited = l.IsUnlimited,
+                        LimitValue = l.LimitValue,
+                        LimitUnit = l.LimitUnit,
+                        IsDeleted = l.IsDeleted
+                    }).ToList()
                 }).ToList();
 
                 return ApiResponse<List<GetPackageResponse>>.SuccessResponse(response);
@@ -62,7 +72,16 @@ namespace MSP.Application.Services.Implementations.Package
                 Currency = package.Currency,
                 BillingCycle = package.BillingCycle,
                 isDeleted = package.IsDeleted,
-                LimitationIds = package.Limitations.Select(l => l.Id).ToList()
+                Limitations = package.Limitations.Select(l => new GetLimitationResponse
+                {
+                    Id = l.Id,
+                    Name = l.Name,
+                    Description = l.Description,
+                    IsUnlimited = l.IsUnlimited,
+                    LimitValue = l.LimitValue,
+                    LimitUnit = l.LimitUnit,
+                    IsDeleted = l.IsDeleted
+                }).ToList()
             };
 
             return ApiResponse<GetPackageResponse>.SuccessResponse(response);
@@ -101,7 +120,16 @@ namespace MSP.Application.Services.Implementations.Package
                 Price = packageEntity.Price,
                 Currency = packageEntity.Currency,
                 BillingCycle = packageEntity.BillingCycle,
-                LimitationIds = packageEntity.Limitations.Select(l => l.Id).ToList()
+                Limitations = packageEntity.Limitations.Select(l => new GetLimitationResponse
+                {
+                    Id = l.Id,
+                    Name = l.Name,
+                    Description = l.Description,
+                    IsUnlimited = l.IsUnlimited,
+                    LimitValue = l.LimitValue,
+                    LimitUnit = l.LimitUnit,
+                    IsDeleted = l.IsDeleted
+                }).ToList()
             };
 
             return ApiResponse<GetPackageResponse>.SuccessResponse(response, "Package created successfully");
@@ -142,7 +170,16 @@ namespace MSP.Application.Services.Implementations.Package
                 Price = packageEntity.Price,
                 Currency = packageEntity.Currency,
                 BillingCycle = packageEntity.BillingCycle,
-                LimitationIds = packageEntity.Limitations.Select(l => l.Id).ToList()
+                Limitations = packageEntity.Limitations.Select(l => new GetLimitationResponse
+                {
+                    Id = l.Id,
+                    Name = l.Name,
+                    Description = l.Description,
+                    IsUnlimited = l.IsUnlimited,
+                    LimitValue = l.LimitValue,
+                    LimitUnit = l.LimitUnit,
+                    IsDeleted = l.IsDeleted
+                }).ToList()
             };
 
             return ApiResponse<GetPackageResponse>.SuccessResponse(response, "Package updated successfully");

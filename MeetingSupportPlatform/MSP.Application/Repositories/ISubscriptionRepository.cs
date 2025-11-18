@@ -12,5 +12,7 @@ namespace MSP.Application.Repositories
     public interface ISubscriptionRepository : IGenericRepository<Subscription, Guid>
     {
         Task<Subscription?> GetByOrderCodeAsync(long orderCode);
+        Task<IEnumerable<Subscription>> GetByUserIdAsync(Guid userId);
+        Task<Subscription?> GetActiveSubscriptionByUserIdAsync(Guid userId);
     }
 }

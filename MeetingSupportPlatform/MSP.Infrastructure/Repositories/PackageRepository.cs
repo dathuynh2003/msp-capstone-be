@@ -15,6 +15,7 @@ namespace MSP.Infrastructure.Repositories
         public async Task<Package?> GetPackageByIdAsync(Guid id)
         {
             return await _context.Packages
+               .Include(p => p.Limitations)
                .FirstOrDefaultAsync(m => m.Id == id);
         }
         public async Task<List<Package>> GetAll()
@@ -27,6 +28,7 @@ namespace MSP.Infrastructure.Repositories
         public async Task<List<Package>> GetByIdsAsync(IEnumerable<Guid> ids)
         {
             return await _context.Packages
+                .Include(p => p.Limitations)
                 .Where(p => ids.Contains(p.Id) && !p.IsDeleted)
                 .ToListAsync();
         }
