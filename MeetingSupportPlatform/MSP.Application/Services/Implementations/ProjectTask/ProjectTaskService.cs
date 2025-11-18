@@ -490,8 +490,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                                 {
                                     UserId = task.ReviewerId.Value,
                                     ActorId = request.ActorId,
-                                    Title = "Công việc sẵn sàng để review",
-                                    Message = $"Công việc '{task.Title}' đã sẵn sàng để bạn review trong dự án {project.Name}",
+                                    Title = "Yêu cầu review công việc",
+                                    Message = $"{task.User?.FullName ?? "Một thành viên"} yêu cầu bạn review công việc '{task.Title}' trong dự án {project.Name}",
                                     Type = NotificationTypeEnum.TaskUpdate.ToString(),
                                     EntityId = task.Id.ToString(),
                                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -510,12 +510,14 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                                 _notificationService.SendEmailNotification(
                                     reviewer.Email!,
-                                    "Công việc sẵn sàng để review",
+                                    "Yêu cầu review công việc",
                                     $"Xin chào {reviewer.FullName},<br/><br/>" +
-                                    $"Công việc <strong>{task.Title}</strong> đã sẵn sàng để review.<br/>" +
-                                    $"Dự án: {project.Name}<br/>" +
-                                    $"Người thực hiện: {task.User?.FullName ?? "N/A"}<br/><br/>" +
-                                    $"Vui lòng kiểm tra và review công việc này."
+                                    $"<strong>{task.User?.FullName ?? "Một thành viên"}</strong> đã hoàn thành và yêu cầu bạn review công việc sau:<br/><br/>" +
+                                    $"📋 <strong>Công việc:</strong> {task.Title}<br/>" +
+                                    $"📁 <strong>Dự án:</strong> {project.Name}<br/>" +
+                                    $"👤 <strong>Người thực hiện:</strong> {task.User?.FullName ?? "N/A"}<br/>" +
+                                    $"📅 <strong>Ngày hoàn thành:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/><br/>" +
+                                    $"Vui lòng truy cập hệ thống để kiểm tra và phản hồi."
                                 );
                             }
                         }
@@ -543,6 +545,18 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                             request.EndDate.Value.ToString("dd/MM/yyyy"),
                             request.ActorId);
                         task.EndDate = request.EndDate.Value;
+
+                        var currentDate = DateTime.UtcNow.Date;
+                        if (request.EndDate.Value.Date > currentDate)
+                        {
+                            task.IsOverdue = false;
+                        }
+                        else if (request.EndDate.Value.Date < currentDate &&
+                                 task.Status != TaskEnum.Done.ToString() &&
+                                 task.Status != TaskEnum.Cancelled.ToString())
+                        {
+                            task.IsOverdue = true;
+                        }
                     }
 
                     // AUTO TRACK: Assignment/Reassignment

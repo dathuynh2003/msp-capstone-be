@@ -17,17 +17,20 @@ namespace MSP.Application.Services.Implementations.Project
     {
         private readonly IProjectRepository _projectRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
+        private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly INotificationService _notificationService;
         private readonly UserManager<User> _userManager;
 
         public ProjectService(
             IProjectRepository projectRepository,
             IProjectMemberRepository projectMemberRepository,
+            IProjectTaskRepository projectTaskRepository,
             INotificationService notificationService,
             UserManager<User> userManager)
         {
             _projectRepository = projectRepository;
             _projectMemberRepository = projectMemberRepository;
+            _projectTaskRepository = projectTaskRepository;
             _notificationService = notificationService;
             _userManager = userManager;
         }
@@ -502,6 +505,97 @@ namespace MSP.Application.Services.Implementations.Project
 
             await _projectRepository.UpdateAsync(project);
 
+            // TRIGGER: Cancel all active tasks (except Done) when project status changes to Completed or Cancelled
+            if (oldStatus != request.Status && 
+                (request.Status == ProjectStatusEnum.Completed.ToString() || 
+                 request.Status == ProjectStatusEnum.Cancelled.ToString()))
+            {
+                try
+                {
+                    // Get all tasks of the project
+                    var projectTasks = await _projectTaskRepository.GetTasksByProjectIdAsync(request.Id);
+                    
+                    // Filter tasks that are not Done or already Cancelled
+                    var tasksToCancel = projectTasks
+                        .Where(t => t.Status != TaskEnum.Done.ToString() && 
+                                   t.Status != TaskEnum.Cancelled.ToString())
+                        .ToList();
+
+                    if (tasksToCancel.Any())
+                    {
+                        foreach (var task in tasksToCancel)
+                        {
+                            task.Status = TaskEnum.Cancelled.ToString();
+                            task.UpdatedAt = DateTime.UtcNow;
+                            await _projectTaskRepository.UpdateAsync(task);
+
+                            // Send notification to assigned user if exists
+                            if (task.UserId.HasValue)
+                            {
+                                var taskNotification = new CreateNotificationRequest
+                                {
+                                    UserId = task.UserId.Value,
+                                    Title = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                        ? "Công việc bị hủy do dự án hoàn thành"
+                                        : "Công việc bị hủy do dự án bị hủy",
+                                    Message = $"Công việc '{task.Title}' đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
+                                    Type = NotificationTypeEnum.TaskUpdate.ToString(),
+                                    EntityId = task.Id.ToString(),
+                                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                                    {
+                                        TaskId = task.Id,
+                                        TaskTitle = task.Title,
+                                        ProjectId = project.Id,
+                                        ProjectName = project.Name,
+                                        NewStatus = TaskEnum.Cancelled.ToString(),
+                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                            ? "ProjectCompleted" 
+                                            : "ProjectCancelled"
+                                    })
+                                };
+
+                                await _notificationService.CreateInAppNotificationAsync(taskNotification);
+                            }
+
+                            // Send notification to reviewer if exists
+                            if (task.ReviewerId.HasValue)
+                            {
+                                var reviewerNotification = new CreateNotificationRequest
+                                {
+                                    UserId = task.ReviewerId.Value,
+                                    Title = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                        ? "Công việc review bị hủy do dự án hoàn thành"
+                                        : "Công việc review bị hủy do dự án bị hủy",
+                                    Message = $"Công việc '{task.Title}' mà bạn đang review đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
+                                    Type = NotificationTypeEnum.TaskUpdate.ToString(),
+                                    EntityId = task.Id.ToString(),
+                                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                                    {
+                                        TaskId = task.Id,
+                                        TaskTitle = task.Title,
+                                        ProjectId = project.Id,
+                                        ProjectName = project.Name,
+                                        NewStatus = TaskEnum.Cancelled.ToString(),
+                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                            ? "ProjectCompleted" 
+                                            : "ProjectCancelled"
+                                    })
+                                };
+
+                                await _notificationService.CreateInAppNotificationAsync(reviewerNotification);
+                            }
+                        }
+
+                        await _projectTaskRepository.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the update operation
+                    Console.WriteLine($"Failed to cancel tasks for project {request.Id}: {ex.Message}");
+                }
+            }
+
             // Check if project status changed to Completed
             if (oldStatus != ProjectStatusEnum.Completed.ToString() && 
                 request.Status == ProjectStatusEnum.Completed.ToString())
@@ -595,6 +689,102 @@ namespace MSP.Application.Services.Implementations.Project
                 {
                     // Log but don't fail the update operation
                     Console.WriteLine($"Failed to send completion notifications: {ex.Message}");
+                }
+            }
+
+            // Check if project status changed to Cancelled
+            if (oldStatus != ProjectStatusEnum.Cancelled.ToString() && 
+                request.Status == ProjectStatusEnum.Cancelled.ToString())
+            {
+                try
+                {
+                    // Send notification to Project Owner
+                    var owner = project.Owner;
+                    if (owner != null)
+                    {
+                        var ownerNotification = new CreateNotificationRequest
+                        {
+                            UserId = owner.Id,
+                            Title = "⚠️ Dự án đã bị hủy",
+                            Message = $"Dự án '{project.Name}' đã được đánh dấu là hủy bỏ.",
+                            Type = NotificationTypeEnum.ProjectUpdate.ToString(),
+                            EntityId = project.Id.ToString(),
+                            Data = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                ProjectId = project.Id,
+                                ProjectName = project.Name,
+                                CancelledAt = DateTime.UtcNow,
+                                EventType = "ProjectCancelled"
+                            })
+                        };
+
+                        await _notificationService.CreateInAppNotificationAsync(ownerNotification);
+
+                        // Send email to owner
+                        _notificationService.SendEmailNotification(
+                            owner.Email!,
+                            "Dự án đã bị hủy",
+                            $"Xin chào {owner.FullName},<br/><br/>" +
+                            $"Dự án <strong>{project.Name}</strong> đã được đánh dấu là hủy bỏ.<br/><br/>" +
+                            $"<strong>Ngày bắt đầu:</strong> {project.StartDate:dd/MM/yyyy}<br/>" +
+                            $"<strong>Ngày kết thúc dự kiến:</strong> {project.EndDate:dd/MM/yyyy}<br/>" +
+                            $"<strong>Hủy bỏ vào:</strong> {DateTime.UtcNow:dd/MM/yyyy}<br/><br/>" +
+                            $"Tất cả công việc chưa hoàn thành đã được tự động hủy.");
+                    }
+
+                    // Send notifications to all active Project Members
+                    if (project.ProjectMembers?.Any() == true)
+                    {
+                        var activeMembers = project.ProjectMembers
+                            .Where(pm => !pm.LeftAt.HasValue) // Only active members
+                            .ToList();
+
+                        foreach (var projectMember in activeMembers)
+                        {
+                            try
+                            {
+                                var memberNotification = new CreateNotificationRequest
+                                {
+                                    UserId = projectMember.MemberId,
+                                    Title = "⚠️ Dự án đã bị hủy",
+                                    Message = $"Dự án '{project.Name}' đã bị hủy. Tất cả công việc chưa hoàn thành đã được tự động hủy.",
+                                    Type = NotificationTypeEnum.ProjectUpdate.ToString(),
+                                    EntityId = project.Id.ToString(),
+                                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                                    {
+                                        ProjectId = project.Id,
+                                        ProjectName = project.Name,
+                                        CancelledAt = DateTime.UtcNow,
+                                        EventType = "ProjectCancelled"
+                                    })
+                                };
+
+                                await _notificationService.CreateInAppNotificationAsync(memberNotification);
+
+                                // Send email to member
+                                var member = projectMember.Member;
+                                if (member != null)
+                                {
+                                    _notificationService.SendEmailNotification(
+                                        member.Email!,
+                                        "Dự án đã bị hủy",
+                                        $"Xin chào {member.FullName},<br/><br/>" +
+                                        $"Dự án <strong>{project.Name}</strong> đã được đánh dấu là hủy bỏ.<br/><br/>" +
+                                        $"Tất cả công việc chưa hoàn thành của bạn trong dự án này đã được tự động hủy.");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log but continue processing other members
+                                Console.WriteLine($"Failed to send notification to member {projectMember.MemberId}: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the update operation
+                    Console.WriteLine($"Failed to send cancellation notifications: {ex.Message}");
                 }
             }
 
