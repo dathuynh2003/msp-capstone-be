@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MSP.Application.Models.Requests.Comment;
 using MSP.Application.Models.Requests.Notification;
@@ -68,8 +68,8 @@ namespace MSP.Application.Services.Implementations.Comment
                     {
                         UserId = task.UserId.Value,
                         ActorId = request.UserId,
-                        Title = "?? Comment m?i tr�n task",
-                        Message = $"{user.FullName} ?� comment tr�n task '{task.Title}'",
+                        Title = "Comment mới trên task",
+                        Message = $"{user.FullName} đã comment trên task '{task.Title}'",
                         Type = NotificationTypeEnum.TaskUpdate.ToString(),
                         EntityId = task.Id.ToString(),
                         Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -99,8 +99,8 @@ namespace MSP.Application.Services.Implementations.Comment
                     {
                         UserId = task.ReviewerId.Value,
                         ActorId = request.UserId,
-                        Title = "?? Comment m?i tr�n task ?ang review",
-                        Message = $"{user.FullName} ?� comment tr�n task '{task.Title}' m� b?n ?ang review",
+                        Title = "Comment mới trên task đang review",
+                        Message = $"{user.FullName} Đã comment trên task '{task.Title}' mà bạn đang review",
                         Type = NotificationTypeEnum.TaskUpdate.ToString(),
                         EntityId = task.Id.ToString(),
                         Data = System.Text.Json.JsonSerializer.Serialize(new

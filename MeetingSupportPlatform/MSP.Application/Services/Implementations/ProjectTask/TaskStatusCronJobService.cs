@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
@@ -96,8 +96,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                                         var notificationRequest = new CreateNotificationRequest
                                         {
                                             UserId = task.UserId.Value,
-                                            Title = "CÙng vi?c qu· h?n",
-                                            Message = $"CÙng vi?c '{task.Title}' ?„ qu· h?n {daysOverdue} ng‡y",
+                                            Title = "C√¥ng vi·ªác qu√° h·∫°n",
+                                            Message = $"C√¥ng vi·ªác '{task.Title}' ƒë√£ qu√° h·∫°n {daysOverdue} ng√†y",
                                             Type = NotificationTypeEnum.TaskUpdate.ToString(),
                                             EntityId = task.Id.ToString(),
                                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -118,13 +118,13 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                                         // Send email notification
                                         _notificationService.SendEmailNotification(
                                             user.Email!,
-                                            "CÙng vi?c qu· h?n",
-                                            $"Xin ch‡o {user.FullName},<br/><br/>" +
-                                            $"CÙng vi?c <strong>{task.Title}</strong> c?a b?n hi?n ?„ qu· h?n {daysOverdue} ng‡y.<br/><br/>" +
-                                            $"<strong>D? ·n:</strong> {project.Name}<br/>" +
-                                            $"<strong>H?n chÛt:</strong> {task.EndDate:dd/MM/yyyy}<br/>" +
-                                            $"<strong>Tr?ng th·i:</strong> {task.Status}<br/><br/>" +
-                                            $"Vui lÚng ho‡n th‡nh cÙng vi?c n‡y c‡ng s?m c‡ng t?t.");
+                                            "C√¥ng vi·ªác qu√° h·∫°n",
+                                            $"Xin ch√†o {user.FullName},<br/><br/>" +
+                                            $"C√¥ng vi·ªác <strong>{task.Title}</strong> c·ªßa b·∫°n hi·ªán ƒë√£ qu√° h·∫°n {daysOverdue} ng√†y.<br/><br/>" +
+                                            $"<strong>D·ª± √°n:</strong> {project.Name}<br/>" +
+                                            $"<strong>H·∫°n ch√≥t:</strong> {task.EndDate:dd/MM/yyyy}<br/>" +
+                                            $"<strong>Tr·∫°ng th√°i:</strong> {task.Status}<br/><br/>" +
+                                            $"Vui l√≤ng ho√†n th√†nh c√¥ng vi·ªác n√†y c√†ng s·ªõm c√†ng t·ªët.");
 
                                         notificationsSent++;
 

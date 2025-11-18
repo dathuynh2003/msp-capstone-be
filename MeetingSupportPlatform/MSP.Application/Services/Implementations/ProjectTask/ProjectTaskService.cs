@@ -676,8 +676,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                         {
                             UserId = request.ReviewerId.Value,
                             ActorId = request.ActorId,
-                            Title = "Bạn được chỉ định làm người review",
-                            Message = $"Bạn được chỉ định review công việc: {task.Title} trong dự án {project.Name}",
+                            Title = "Bạn được yêu cầu review công việc",
+                            Message = $"Bạn được yêu cầu review cho công việc: {task.Title} trong dự án {project.Name}",
                             Type = NotificationTypeEnum.TaskAssignment.ToString(),
                             EntityId = task.Id.ToString(),
                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -696,9 +696,9 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                         _notificationService.SendEmailNotification(
                             newReviewer.Email!,
-                            "Bạn được chỉ định làm người review",
+                            "Bạn được yêu cầu review công việc",
                             $"Xin chào {newReviewer.FullName},<br/><br/>" +
-                            $"Bạn được chỉ định làm người review cho công việc: <strong>{task.Title}</strong><br/>" +
+                            $"Bạn được yêu cầu review cho công việc: <strong>{task.Title}</strong><br/>" +
                             $"Dự án: {project.Name}<br/>" +
                             $"Người thực hiện: {task.User?.FullName ?? "Chưa có"}<br/>" +
                             $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
