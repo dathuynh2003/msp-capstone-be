@@ -22,8 +22,9 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
 
             if (!string.IsNullOrEmpty(userId))
             {
@@ -50,8 +51,9 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
 
             if (!string.IsNullOrEmpty(userId))
             {
@@ -102,8 +104,9 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public async Task MarkNotificationAsRead(Guid notificationId)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
 
             _logger.LogInformation(
                 "User {UserId} marked notification {NotificationId} as read",

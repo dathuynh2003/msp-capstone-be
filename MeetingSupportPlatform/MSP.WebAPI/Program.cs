@@ -125,7 +125,8 @@ app.UseHangfireDashboard();
 app.UseHangfireJobs();
 
 // Map SignalR Hub
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notificationHub")
+   .RequireAuthorization();
 
 app.MapControllers();
 app.Run();

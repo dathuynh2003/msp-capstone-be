@@ -521,6 +521,51 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                                 );
                             }
                         }
+
+                        // Gửi notification khi PM reopen task 
+                        if (request.Status == TaskEnum.ReOpened.ToString() &&
+                            oldStatus == TaskEnum.ReadyToReview.ToString() &&
+                            task.UserId.HasValue)
+                        {
+                            var assignee = task.User ?? await _userManager.FindByIdAsync(task.UserId.Value.ToString());
+                            if (assignee != null)
+                            {
+                                var reopenNotification = new CreateNotificationRequest
+                                {
+                                    UserId = task.UserId.Value,
+                                    ActorId = request.ActorId,
+                                    Title = "Công việc được mở lại",
+                                    Message = $"Công việc '{task.Title}' đã được mở lại bởi Project Manager trong dự án {project.Name}",
+                                    Type = NotificationTypeEnum.TaskUpdate.ToString(),
+                                    EntityId = task.Id.ToString(),
+                                    Data = System.Text.Json.JsonSerializer.Serialize(new
+                                    {
+                                        TaskId = task.Id,
+                                        TaskTitle = task.Title,
+                                        ProjectId = project.Id,
+                                        ProjectName = project.Name,
+                                        OldStatus = oldStatus,
+                                        NewStatus = request.Status,
+                                        DueDate = task.EndDate
+                                    })
+                                };
+
+                                await _notificationService.CreateInAppNotificationAsync(reopenNotification);
+
+                                _notificationService.SendEmailNotification(
+                                    assignee.Email!,
+                                    "Công việc được mở lại",
+                                    $"Xin chào {assignee.FullName},<br/><br/>" +
+                                    $"Công việc <strong>{task.Title}</strong> đã được Project Manager mở lại.<br/><br/>" +
+                                    $"📋 <strong>Công việc:</strong> {task.Title}<br/>" +
+                                    $"📁 <strong>Dự án:</strong> {project.Name}<br/>" +
+                                    $"🔄 <strong>Trạng thái cũ:</strong> {oldStatus}<br/>" +
+                                    $"✅ <strong>Trạng thái mới:</strong> {request.Status}<br/>" +
+                                    $"📅 <strong>Hạn chót:</strong> {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                                    $"Vui lòng kiểm tra và tiếp tục thực hiện công việc này."
+                                );
+                            }
+                        }
                     }
 
                     // AUTO TRACK: StartDate change

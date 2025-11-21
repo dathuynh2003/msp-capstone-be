@@ -46,17 +46,28 @@ namespace MSP.Infrastructure.Extensions
                 {
                     OnMessageReceived = context =>
                     {
-                        // Ưu tiên Authorization header trước
+                        var accessToken = context.Request.Query["access_token"];
+
+                        // Nếu request là tới SignalR Hub thì lấy token từ query
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/notificationHub"))
+                        {
+                            context.Token = accessToken;
+                            return Task.CompletedTask;
+                        }
+
+                        // Nếu không phải hub → lấy từ header hoặc cookies như hiện tại
                         var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
                         if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
                         {
                             context.Token = authHeader.Substring("Bearer ".Length).Trim();
                         }
-                        // Fallback về cookies
                         else
                         {
                             context.Token = context.Request.Cookies["ACCESS_TOKEN"];
                         }
+
                         return Task.CompletedTask;
                     }
                 };
