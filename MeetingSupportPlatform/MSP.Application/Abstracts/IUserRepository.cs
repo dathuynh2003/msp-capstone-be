@@ -15,5 +15,6 @@ namespace MSP.Application.Abstracts
         Task<IEnumerable<User>> GetUsersWithExpiredRefreshTokensAsync(DateTime currentTime);
         Task UpdateAsync(User user);
         Task SaveChangesAsync();
+
     }
 }

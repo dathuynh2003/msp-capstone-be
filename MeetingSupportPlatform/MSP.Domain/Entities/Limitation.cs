@@ -9,6 +9,7 @@ namespace MSP.Domain.Entities
         public bool IsUnlimited { get; set; }
         public int? LimitValue { get; set; }
         public string? LimitUnit { get; set; }
+        public string LimitationType { get; set; }
         public virtual ICollection<Package> Packages { get; set; } = new List<Package>();
     }
 }

@@ -1,4 +1,5 @@
-﻿using MSP.Application.Abstracts;
+﻿using Microsoft.EntityFrameworkCore;
+using MSP.Application.Abstracts;
 using MSP.Domain.Entities;
 
 namespace MSP.Application.Repositories

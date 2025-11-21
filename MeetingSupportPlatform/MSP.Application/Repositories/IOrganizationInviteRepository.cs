@@ -23,5 +23,8 @@ namespace MSP.Application.Repositories
         /// Lấy pending invitations đã quá expiry date
         /// </summary>
         Task<IEnumerable<OrganizationInvitation>> GetExpiredPendingInvitationsAsync(DateTime expiryDate);
+
+        //count number of members in organization in subscription period
+        Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate);
     }
 }

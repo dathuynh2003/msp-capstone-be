@@ -106,8 +106,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     {
                         UserId = member.Id,
                         ActorId = businessOwner.Id,
-                        Title = "Yêu cầu tham gia được chấp nhận",
-                        Message = $"{businessOwner.FullName} đã chấp nhận yêu cầu tham gia của bạn tại {businessOwner.Organization}. Chào mừng bạn!",
+                        Title = "Join request accepted",
+                        Message = $"{businessOwner.FullName} has accepted your join request at {businessOwner.Organization}. Welcome!",
                         Type = NotificationTypeEnum.InApp.ToString(),
                         EntityId = request.Id.ToString(),
                         Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -125,11 +125,11 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     // Send email notification
                     _notificationService.SendEmailNotification(
                         member.Email!,
-                        "Yêu cầu tham gia được chấp nhận",
-                        $"Chào {member.FullName},<br/><br/>" +
-                        $"Tin vui! {businessOwner.FullName} đã chấp nhận yêu cầu tham gia của bạn vào <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
-                        $"Bạn đã trở thành thành viên tổ chức và có thể bắt đầu phối hợp làm việc.<br/><br/>" +
-                        $"Chào mừng bạn!");
+                        "Join request accepted",
+                        $"Hello {member.FullName},<br/><br/>" +
+                        $"Great news! {businessOwner.FullName} has accepted your join request to <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                        $"You are now a member of the organization and can start collaborating.<br/><br/>" +
+                        $"Welcome!");
                 }
                 catch (Exception ex)
                 {
@@ -182,8 +182,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                         {
                             UserId = member.Id,
                             ActorId = businessOwner.Id,
-                            Title = "Yêu cầu tham gia bị từ chối",
-                            Message = $"Yêu cầu tham gia của bạn tại {businessOwner.Organization} đã bị {businessOwner.FullName} từ chối.",
+                            Title = "Join request rejected",
+                            Message = $"Your join request at {businessOwner.Organization} has been rejected by {businessOwner.FullName}.",
                             Type = NotificationTypeEnum.InApp.ToString(),
                             EntityId = request.Id.ToString(),
                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -201,10 +201,10 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                         // Send email notification
                         _notificationService.SendEmailNotification(
                             member.Email!,
-                            "Yêu cầu tham gia bị từ chối",
-                            $"Chào {member.FullName},<br/><br/>" +
-                            $"Rất tiếc, {businessOwner.FullName} đã từ chối yêu cầu tham gia của bạn vào <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
-                            $"Bạn có thể liên hệ quản trị viên tổ chức để biết thêm thông tin.");
+                            "Join request rejected",
+                            $"Hello {member.FullName},<br/><br/>" +
+                            $"Unfortunately, {businessOwner.FullName} has rejected your join request to <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                            $"You can contact the organization administrator for more information.");
                     }
                 }
                 catch (Exception ex)
@@ -435,8 +435,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     {
                         UserId = businessOwner.Id,
                         ActorId = member.Id,
-                        Title = "Lời mời được chấp nhận",
-                        Message = $"{member.FullName} đã chấp nhận lời mời và gia nhập {businessOwner.Organization}.",
+                        Title = "Invitation accepted",
+                        Message = $"{member.FullName} has accepted the invitation and joined {businessOwner.Organization}.",
                         Type = NotificationTypeEnum.InApp.ToString(),
                         EntityId = invitation.Id.ToString(),
                         Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -455,10 +455,10 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                     // Send email notification
                     _notificationService.SendEmailNotification(
                         businessOwner.Email!,
-                        "Lời mời được chấp nhận",
-                        $"Chào {businessOwner.FullName},<br/><br/>" +
-                        $"<strong>{member.FullName}</strong> đã chấp nhận lời mời và hiện là thành viên của tổ chức <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
-                        $"Bạn có thể thêm họ vào các dự án và bắt đầu cùng làm việc.");
+                        "Invitation accepted",
+                        $"Hello {businessOwner.FullName},<br/><br/>" +
+                        $"<strong>{member.FullName}</strong> has accepted the invitation and is now a member of <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                        $"You can add them to projects and start collaborating.");
                 }
                 catch (Exception ex)
                 {
@@ -548,8 +548,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                         {
                             UserId = businessOwner.Id,
                             ActorId = member.Id,
-                            Title = "Lời mời bị từ chối",
-                            Message = $"{member.FullName} đã từ chối lời mời tham gia {businessOwner.Organization}.",
+                            Title = "Invitation rejected",
+                            Message = $"{member.FullName} has rejected the invitation to join {businessOwner.Organization}.",
                             Type = NotificationTypeEnum.InApp.ToString(),
                             EntityId = invitation.Id.ToString(),
                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -568,9 +568,9 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                         // Send email notification
                         _notificationService.SendEmailNotification(
                             businessOwner.Email!,
-                            "Lời mời bị từ chối",
-                            $"Chào {businessOwner.FullName},<br/><br/>" +
-                            $"<strong>{member.FullName}</strong> đã từ chối lời mời tham gia tổ chức <strong>{businessOwner.Organization}</strong>.");
+                            "Invitation rejected",
+                            $"Hello {businessOwner.FullName},<br/><br/>" +
+                            $"<strong>{member.FullName}</strong> has rejected the invitation to join <strong>{businessOwner.Organization}</strong>.");
                     }
                 }
                 catch (Exception ex)
@@ -649,8 +649,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 {
                     UserId = businessOwner.Id,
                     ActorId = member.Id,
-                    Title = "Yêu cầu tham gia mới",
-                    Message = $"{member.FullName} đã gửi yêu cầu tham gia tổ chức {businessOwner.Organization} của bạn.",
+                    Title = "New join request",
+                    Message = $"{member.FullName} has sent a join request to your organization {businessOwner.Organization}.",
                     Type = NotificationTypeEnum.InApp.ToString(),
                     EntityId = invitation.Id.ToString(),
                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -669,10 +669,10 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 // Send email notification
                 _notificationService.SendEmailNotification(
                     businessOwner.Email!,
-                    "Yêu cầu tham gia mới",
-                    $"Chào {businessOwner.FullName},<br/><br/>" +
-                    $"<strong>{member.FullName}</strong> ({member.Email}) đã gửi yêu cầu tham gia tổ chức <strong>{businessOwner.Organization}</strong> của bạn.<br/><br/>" +
-                    $"Vui lòng kiểm tra và phản hồi yêu cầu này trên bảng điều khiển của bạn.");
+                    "New join request",
+                    $"Hello {businessOwner.FullName},<br/><br/>" +
+                    $"<strong>{member.FullName}</strong> ({member.Email}) has sent a join request to your organization <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
+                    $"Please review and respond to this request on your dashboard.");
             }
             catch (Exception ex)
             {
@@ -769,8 +769,8 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 {
                     UserId = member.Id,
                     ActorId = businessOwner.Id,
-                    Title = "Lời mời tham gia tổ chức",
-                    Message = $"{businessOwner.FullName} đã mời bạn tham gia tổ chức {businessOwner.Organization}.",
+                    Title = "Organization Invitation",
+                    Message = $"{businessOwner.FullName} has invited you to join the organization {businessOwner.Organization}.",
                     Type = NotificationTypeEnum.InApp.ToString(),
                     EntityId = invitation.Id.ToString(),
                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -789,10 +789,10 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 // Send email notification
                 _notificationService.SendEmailNotification(
                     member.Email!,
-                    "Lời mời tham gia tổ chức",
-                    $"Chào {member.FullName},<br/><br/>" +
-                    $"Bạn đã được <strong>{businessOwner.FullName}</strong> mời tham gia tổ chức <strong>{businessOwner.Organization}</strong>.<br/><br/>" +
-                    $"Vui lòng đăng nhập vào bảng điều khiển của bạn để chấp nhận hoặc từ chối lời mời.");
+                    "Organization Invitation",
+                    $"Hello {member.FullName},<br/><br/>" +
+                    $"You have been invited to join the organization <strong>{businessOwner.Organization}</strong> by <strong>{businessOwner.FullName}</strong>.<br/><br/>" +
+                    $"Please log in to your dashboard to accept or decline the invitation.");
             }
             catch (Exception ex)
             {

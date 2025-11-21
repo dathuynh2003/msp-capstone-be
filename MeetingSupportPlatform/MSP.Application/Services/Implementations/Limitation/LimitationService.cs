@@ -26,6 +26,7 @@ namespace MSP.Application.Services.Implementations.Limitation
                 IsUnlimited = request.IsUnlimited,
                 LimitValue = request.LimitValue,
                 LimitUnit = request.LimitUnit,
+                LimitationType = request.LimitationType,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -60,6 +61,7 @@ namespace MSP.Application.Services.Implementations.Limitation
             limitation.IsUnlimited = request.IsUnlimited;
             limitation.LimitValue = request.LimitValue;
             limitation.LimitUnit = request.LimitUnit;
+            limitation.LimitationType = request.LimitationType;
             limitation.UpdatedAt = DateTime.UtcNow;
 
             await _limitationRepository.UpdateAsync(limitation);
@@ -107,6 +109,7 @@ namespace MSP.Application.Services.Implementations.Limitation
                 IsUnlimited = limitation.IsUnlimited,
                 LimitValue = limitation.LimitValue,
                 LimitUnit = limitation.LimitUnit,
+                LimitationType = limitation.LimitationType,
                 IsDeleted = limitation.IsDeleted,
             };
 
@@ -126,6 +129,7 @@ namespace MSP.Application.Services.Implementations.Limitation
                     IsUnlimited = l.IsUnlimited,
                     LimitValue = l.LimitValue,
                     LimitUnit = l.LimitUnit,
+                    LimitationType = l.LimitationType,
                     IsDeleted = l.IsDeleted,
                 }).ToList();
 

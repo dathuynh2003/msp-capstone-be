@@ -13,5 +13,7 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<Project>> GetNotStartedProjectsProjectsToStartAsync(DateTime currentTime, string notStartedStatus);
         Task<IEnumerable<Project>> GetProjectsNearingDeadlineAsync(DateTime currentTime, DateTime deadlineThreshold, string inProgressStatus);
         Task<IEnumerable<Project>> GetOverdueInProgressProjectsAsync(DateTime currentTime, string inProgressStatus);
+        Task<int> CountProjectsAsync(Guid userId, DateTime? startDate, DateTime? endDate);
+
     }
 }

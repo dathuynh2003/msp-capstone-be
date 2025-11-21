@@ -13,6 +13,7 @@ using PayOS.Models;
 using Serilog.Core;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -129,8 +130,13 @@ namespace MSP.Application.Services.Implementations.Payment
                     }
                     //activate current subscription
                     subscription.Status = PaymentEnum.Paid.ToString().ToUpper();
-                    subscription.PaidAt = DateTime.Parse(transactionDateTime, null,
-                        System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
+                    subscription.PaidAt = DateTime.ParseExact(
+                        transactionDateTime,
+                        "yyyy-MM-dd HH:mm:ss",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeLocal
+                    );
+                    subscription.PaidAt = DateTime.UtcNow;
                     subscription.IsActive = true;
                     subscription.PaymentMethod = "PayOS";
                     subscription.TransactionID = reference;

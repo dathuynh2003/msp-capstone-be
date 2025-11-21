@@ -89,5 +89,20 @@ namespace MSP.Infrastructure.Repositories
                 .ToListAsync();
             return meetings;
         }
+
+        public async Task<int> CountMeetingsAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.Meetings.AsQueryable();
+
+            query = query.Where(m => m.CreatedBy.ManagedById == businessOwnerId);
+
+            if (startDate.HasValue)
+                query = query.Where(m => m.StartTime.Date >= startDate.Value.Date);
+
+            if (endDate.HasValue)
+                query = query.Where(m => m.StartTime.Date <= endDate.Value.Date);
+
+            return await query.CountAsync();
+        }
     }
 }

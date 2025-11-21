@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MSP.Application.Models.Responses.Limitation
 {
-    public class GetLimitationResponse
+    public class GetLimitationUsageResponse
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
@@ -15,7 +15,6 @@ namespace MSP.Application.Models.Responses.Limitation
         public int? LimitValue { get; set; }
         public string? LimitUnit { get; set; }
         public string LimitationType { get; set; }
-        public bool IsDeleted { get; set; }
-
+        public int UsedValue { get; set; } // số đã dùng
     }
 }

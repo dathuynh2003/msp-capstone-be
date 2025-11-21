@@ -13,5 +13,6 @@ namespace MSP.Application.Models.Requests.Limitation
         public bool IsUnlimited { get; set; }
         public int LimitValue { get; set; }
         public string LimitUnit { get; set; }
+        public string LimitationType { get; set; }
     }
 }

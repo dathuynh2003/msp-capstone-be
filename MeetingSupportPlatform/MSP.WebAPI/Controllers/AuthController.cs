@@ -89,6 +89,14 @@ namespace MSP.WebAPI.Controllers
             return Ok(rs);
         }
 
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            var result = await _accountService.LogoutAsync(userIdClaim);
+            return Ok(result);
+        }
 
     }
 }

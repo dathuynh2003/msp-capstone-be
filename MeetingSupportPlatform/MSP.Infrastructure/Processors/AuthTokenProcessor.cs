@@ -80,5 +80,16 @@ namespace MSP.Infrastructure.Processors
                 SameSite = SameSiteMode.Strict,
             });
         }
+
+        public void ClearAuthTokenCookies()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                return;
+            }
+            httpContext.Response.Cookies.Delete("ACCESS_TOKEN");
+            httpContext.Response.Cookies.Delete("REFRESH_TOKEN");
+        }
     }
 }

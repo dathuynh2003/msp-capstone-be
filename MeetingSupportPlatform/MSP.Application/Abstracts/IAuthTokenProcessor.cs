@@ -8,6 +8,7 @@ namespace MSP.Application.Abstracts
 
         string GenerateRefreshToken();
         void WriteAuthTokenAsHttpOnlyCookie(string cookieName, string token, DateTime expiration);
+        void ClearAuthTokenCookies();
 
     }
 }

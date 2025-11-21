@@ -1,4 +1,6 @@
-﻿using MSP.Application.Models.Requests.Payment;
+﻿using Microsoft.AspNetCore.Identity;
+using MSP.Application.Abstracts;
+using MSP.Application.Models.Requests.Payment;
 using MSP.Application.Models.Requests.Subscription;
 using MSP.Application.Models.Responses.Limitation;
 using MSP.Application.Models.Responses.Package;
@@ -23,11 +25,19 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
         private readonly IPaymentService _paymentService;
         private readonly IPackageRepository _packageRepository;
         private readonly ISubscriptionRepository _subscriptionRepository;
-        public SubscriptionService(IPaymentService paymentService, IPackageRepository packageRepository, ISubscriptionRepository subscriptionRepository)
+        private readonly UserManager<User> _userManager;
+        private readonly IProjectRepository _projectRepository;
+        private readonly IMeetingRepository _meetingRepository;
+        private readonly IOrganizationInviteRepository _organizationInviteRepository;
+        public SubscriptionService(IPaymentService paymentService, IPackageRepository packageRepository, ISubscriptionRepository subscriptionRepository, UserManager<User> userManager, IProjectRepository projectRepository, IUserRepository userRepository, IMeetingRepository meetingRepository, IOrganizationInviteRepository organizationInviteRepository)
         {
             _paymentService = paymentService;
             _packageRepository = packageRepository;
             _subscriptionRepository = subscriptionRepository;
+            _userManager = userManager;
+            _projectRepository = projectRepository;
+            _meetingRepository = meetingRepository;
+            _organizationInviteRepository = organizationInviteRepository;
         }
         public async Task<ApiResponse<GetSubscriptionResponse>> CreateSubscriptionAsync(CreateSubscriptionRequest request)
         {
@@ -47,7 +57,7 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             var paymentRequest = new CreatePaymentLinkRequest
             {
                 Amount = (int)package.Price,
-                Description = $"Subscription package",
+                Description = $"Buy package",
                 ReturnUrl = request.ReturnUrl,
                 CancelUrl = request.CancelUrl
             };
@@ -77,6 +87,9 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
 
         public async Task<ApiResponse<GetSubscriptionDetailResponse>> GetActiveSubscriptionByUserIdAsync(Guid userId)
         {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return ApiResponse<GetSubscriptionDetailResponse>.ErrorResponse(null, "User not found");
             var subscription = await _subscriptionRepository.GetActiveSubscriptionByUserIdAsync(userId);
             if (subscription == null)
             {
@@ -125,9 +138,118 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             return ApiResponse<GetSubscriptionDetailResponse>.SuccessResponse(response, "Get active subscription successfully");
         }
 
+
+
         public async Task<ApiResponse<IEnumerable<GetSubscriptionDetailResponse>>> GetSubscriptionsByUserIdAsync(Guid userId)
         {
             var subscriptions = await _subscriptionRepository.GetByUserIdAsync(userId);
+            var response = subscriptions.Select(subscription => new GetSubscriptionDetailResponse
+            {
+                Id = subscription.Id,
+                UserId = subscription.UserId,
+                PackageId = subscription.PackageId,
+                TotalPrice = subscription.TotalPrice,
+                IsActive = subscription.IsActive,
+                Status = subscription.Status,
+                PaymentMethod = subscription.PaymentMethod,
+                TransactionID = subscription.TransactionID,
+                StartDate = subscription.StartDate,
+                EndDate = subscription.EndDate,
+                PaidAt = subscription.PaidAt,
+                User = new GetUserResponse
+                {
+                    Id = subscription.User.Id,
+                    FullName = subscription.User.FullName,
+                    Email = subscription.User.Email,
+                    CreatedAt = subscription.User.CreatedAt,
+                },
+                Package = new GetPackageResponse
+                {
+                    Id = subscription.Package.Id,
+                    Name = subscription.Package.Name,
+                    Description = subscription.Package.Description,
+                    Price = subscription.Package.Price,
+                    BillingCycle = subscription.Package.BillingCycle,
+                    Currency = subscription.Package.Currency,
+                    Limitations = subscription.Package.Limitations.Select(l => new GetLimitationResponse
+                    {
+                        Id = l.Id,
+                        Name = l.Name,
+                        Description = l.Description,
+                        IsUnlimited = l.IsUnlimited,
+                        LimitValue = l.LimitValue,
+                        LimitUnit = l.LimitUnit,
+                        IsDeleted = l.IsDeleted
+                    }).ToList()
+                },
+            });
+            return ApiResponse<IEnumerable<GetSubscriptionDetailResponse>>.SuccessResponse(response, "Get subscriptions successfully");
+        }
+
+        public async Task<ApiResponse<GetSubscriptionUsageResponse>> GetActiveSubscriptionWithUsageAsync(Guid userId)
+        {
+            var subscription = await _subscriptionRepository.GetActiveSubscriptionByUserIdAsync(userId);
+            if (subscription == null)
+            {
+                return ApiResponse<GetSubscriptionUsageResponse>.ErrorResponse(null, "No active subscription found for the user");
+            }
+            // Lấy số lượng đã dùng cho mỗi limitation
+            var limitationUsages = new List<GetLimitationUsageResponse>();
+
+            foreach (var l in subscription.Package.Limitations.Where(l => !l.IsDeleted))
+            {
+                int used = l.LimitationType switch
+                {
+                    nameof(LimitationTypeEnum.NumberProject) => await _projectRepository.CountProjectsAsync(userId, subscription.StartDate, subscription.EndDate),
+                    nameof(LimitationTypeEnum.NumberMeeting) => await _meetingRepository.CountMeetingsAsync(userId, subscription.StartDate, subscription.EndDate),
+                    nameof(LimitationTypeEnum.NumberMemberInOrganization) => await _organizationInviteRepository.CountMembersInOrganizationAsync(userId, subscription.StartDate, subscription.EndDate),
+                    _ => 0
+                };
+
+                limitationUsages.Add(new GetLimitationUsageResponse
+                {
+                    Id = l.Id,
+                    Name = l.Name,
+                    Description = l.Description,
+                    IsUnlimited = l.IsUnlimited,
+                    LimitValue = l.LimitValue,
+                    LimitUnit = l.LimitUnit,
+                    LimitationType = l.LimitationType,
+                    UsedValue = used
+                });
+            }
+
+
+
+            var response = new GetSubscriptionUsageResponse
+            {
+                Id = subscription.Id,
+                PaymentMethod = subscription.PaymentMethod,
+                TransactionID = subscription.TransactionID,
+                TotalPrice = subscription.TotalPrice,
+                Status = subscription.Status,
+                PaidAt = subscription.PaidAt,
+                StartDate = subscription.StartDate,
+                EndDate = subscription.EndDate,
+                IsActive = subscription.IsActive,
+                PackageId = subscription.PackageId,
+                Package = new GetPackageUsageResponse
+                {
+                    Id = subscription.PackageId,
+                    Name = subscription.Package.Name,
+                    Description = subscription.Package.Description,
+                    Price = subscription.Package.Price,
+                    Currency = subscription.Package.Currency,
+                    BillingCycle = subscription.Package.BillingCycle,
+                    Limitations = limitationUsages.ToList()
+                }
+            };
+            return ApiResponse<GetSubscriptionUsageResponse>.SuccessResponse(response, "Get active subscription with usage successfully");
+        }
+
+        public async Task<ApiResponse<IEnumerable<GetSubscriptionDetailResponse>>> GetAllSubscriptionsAsync()
+        {
+            var subscriptions = await _subscriptionRepository.GetAllAsync();
             var response = subscriptions.Select(subscription => new GetSubscriptionDetailResponse
             {
                 Id = subscription.Id,

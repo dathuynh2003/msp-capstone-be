@@ -33,6 +33,10 @@ namespace MSP.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-
+        public async Task<Package?> GetFreePackageAsync()
+        {
+            return await _context.Packages
+                .FirstOrDefaultAsync(p => p.Price == 0 && !p.IsDeleted);
+        }
     }
 }

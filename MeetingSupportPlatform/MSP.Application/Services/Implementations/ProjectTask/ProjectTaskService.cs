@@ -118,8 +118,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                         {
                             UserId = request.UserId.Value,
                             ActorId = request.ActorId,
-                            Title = "Công việc mới được giao",
-                            Message = $"Bạn đã được giao công việc: {newTask.Title} trong dự án {project.Name}",
+                            Title = "New task assigned",
+                            Message = $"You have been assigned a new task: {newTask.Title} in project {project.Name}",
                             Type = NotificationTypeEnum.TaskAssignment.ToString(),
                             EntityId = newTask.Id.ToString(),
                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -136,12 +136,12 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                         _notificationService.SendEmailNotification(
                             user.Email!,
-                            "Công việc mới được giao",
-                            $"Xin chào {user.FullName},<br/><br/>" +
-                            $"Bạn đã được giao công việc mới: <strong>{newTask.Title}</strong><br/>" +
-                            $"Dự án: {project.Name}<br/>" +
-                            $"Hạn chót: {newTask.EndDate:dd/MM/yyyy}<br/><br/>" +
-                            $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết."
+                            "New task assigned",
+                            $"Hello {user.FullName},<br/><br/>" +
+                            $"You have been assigned a new task: <strong>{newTask.Title}</strong><br/>" +
+                            $"Project: {project.Name}<br/>" +
+                            $"Due date: {newTask.EndDate:dd/MM/yyyy}<br/><br/>" +
+                            $"Please check your dashboard for more details."
                         );
                     }
                 }
@@ -490,8 +490,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                                 {
                                     UserId = task.ReviewerId.Value,
                                     ActorId = request.ActorId,
-                                    Title = "Yêu cầu review công việc",
-                                    Message = $"{task.User?.FullName ?? "Một thành viên"} yêu cầu bạn review công việc '{task.Title}' trong dự án {project.Name}",
+                                    Title = "Task review request",
+                                    Message = $"{task.User?.FullName ?? "A team member"} is requesting you to review the task '{task.Title}' in project {project.Name}",
                                     Type = NotificationTypeEnum.TaskUpdate.ToString(),
                                     EntityId = task.Id.ToString(),
                                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -510,14 +510,14 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                                 _notificationService.SendEmailNotification(
                                     reviewer.Email!,
-                                    "Yêu cầu review công việc",
-                                    $"Xin chào {reviewer.FullName},<br/><br/>" +
-                                    $"<strong>{task.User?.FullName ?? "Một thành viên"}</strong> đã hoàn thành và yêu cầu bạn review công việc sau:<br/><br/>" +
-                                    $"📋 <strong>Công việc:</strong> {task.Title}<br/>" +
-                                    $"📁 <strong>Dự án:</strong> {project.Name}<br/>" +
-                                    $"👤 <strong>Người thực hiện:</strong> {task.User?.FullName ?? "N/A"}<br/>" +
-                                    $"📅 <strong>Ngày hoàn thành:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/><br/>" +
-                                    $"Vui lòng truy cập hệ thống để kiểm tra và phản hồi."
+                                    "Task review request",
+                                    $"Hello {reviewer.FullName},<br/><br/>" +
+                                    $"<strong>{task.User?.FullName ?? "A team member"}</strong> has completed and is requesting you to review the following task:<br/><br/>" +
+                                    $"📋 <strong>Task:</strong> {task.Title}<br/>" +
+                                    $"📁 <strong>Project:</strong> {project.Name}<br/>" +
+                                    $"👤 <strong>Assignee:</strong> {task.User?.FullName ?? "N/A"}<br/>" +
+                                    $"📅 <strong>Completion date:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/><br/>" +
+                                    $"Please access the system to review and provide feedback."
                                 );
                             }
                         }
@@ -625,25 +625,25 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                         if (oldUserId.HasValue)
                         {
-                            notificationTitle = "Công việc được giao lại";
-                            notificationMessage = $"Công việc '{task.Title}' đã được giao lại cho bạn trong dự án {project.Name}";
-                            emailSubject = "Công việc được giao lại";
-                            emailBody = $"Xin chào {newUser.FullName},<br/><br/>" +
-                                       $"Công việc <strong>{task.Title}</strong> đã được giao lại cho bạn.<br/>" +
-                                       $"Dự án: {project.Name}<br/>" +
-                                       $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
-                                       $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
+                            notificationTitle = "Task reassigned";
+                            notificationMessage = $"Task '{task.Title}' has been reassigned to you in project {project.Name}";
+                            emailSubject = "Task reassigned";
+                            emailBody = $"Hello {newUser.FullName},<br/><br/>" +
+                                       $"Task <strong>{task.Title}</strong> has been reassigned to you.<br/>" +
+                                       $"Project: {project.Name}<br/>" +
+                                       $"Due date: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                                       $"Please check your dashboard for more details.";
                         }
                         else
                         {
-                            notificationTitle = "Công việc mới được giao";
-                            notificationMessage = $"Bạn đã được giao công việc: {task.Title} trong dự án {project.Name}";
-                            emailSubject = "Công việc mới được giao";
-                            emailBody = $"Xin chào {newUser.FullName},<br/><br/>" +
-                                       $"Bạn đã được giao công việc mới: <strong>{task.Title}</strong><br/>" +
-                                       $"Dự án: {project.Name}<br/>" +
-                                       $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
-                                       $"Vui lòng kiểm tra bảng điều khiển để biết thêm chi tiết.";
+                            notificationTitle = "New task assigned";
+                            notificationMessage = $"You have been assigned a new task: {task.Title} in project {project.Name}";
+                            emailSubject = "New task assigned";
+                            emailBody = $"Hello {newUser.FullName},<br/><br/>" +
+                                       $"You have been assigned a new task: <strong>{task.Title}</strong><br/>" +
+                                       $"Project: {project.Name}<br/>" +
+                                       $"Due date: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                                       $"Please check your dashboard for more details.";
                         }
 
                         var notificationRequest = new CreateNotificationRequest
@@ -676,8 +676,8 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                         {
                             UserId = request.ReviewerId.Value,
                             ActorId = request.ActorId,
-                            Title = "Bạn được yêu cầu review công việc",
-                            Message = $"Bạn được yêu cầu review cho công việc: {task.Title} trong dự án {project.Name}",
+                            Title = "You are requested to review a task",
+                            Message = $"You are requested to review the task: {task.Title} in project {project.Name}",
                             Type = NotificationTypeEnum.TaskAssignment.ToString(),
                             EntityId = task.Id.ToString(),
                             Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -696,13 +696,13 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                         _notificationService.SendEmailNotification(
                             newReviewer.Email!,
-                            "Bạn được yêu cầu review công việc",
-                            $"Xin chào {newReviewer.FullName},<br/><br/>" +
-                            $"Bạn được yêu cầu review cho công việc: <strong>{task.Title}</strong><br/>" +
-                            $"Dự án: {project.Name}<br/>" +
-                            $"Người thực hiện: {task.User?.FullName ?? "Chưa có"}<br/>" +
-                            $"Hạn chót: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
-                            $"Vui lòng theo dõi tiến độ và review công việc này."
+                            "You have been requested to review a task",
+                            $"Hello {newReviewer.FullName},<br/><br/>" +
+                            $"You have been requested to review the following task: <strong>{task.Title}</strong><br/>" +
+                            $"Project: {project.Name}<br/>" +
+                            $"Assignee: {task.User?.FullName ?? "Unassigned"}<br/>" +
+                            $"Deadline: {task.EndDate:dd/MM/yyyy}<br/><br/>" +
+                            $"Please monitor the progress and review this task."
                         );
                     }
                 }

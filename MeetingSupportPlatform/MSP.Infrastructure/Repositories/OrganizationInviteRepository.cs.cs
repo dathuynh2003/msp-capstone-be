@@ -126,5 +126,16 @@ namespace MSP.Infrastructure.Repositories
                 .Include(x => x.Member)
                 .ToListAsync();
         }
+
+        public Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate)
+        {
+            return _context.OrganizationInvitations
+                .Where(x =>
+                    x.BusinessOwnerId == businessOwnerId &&
+                    x.Status == InvitationStatus.Accepted &&
+                    (!startDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date >= startDate.Value.Date)) &&
+                    (!endDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date <= endDate.Value.Date)))
+                .CountAsync();
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Hangfire;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using MSP.Application.Abstracts;
 using MSP.Application.Exceptions;
 using MSP.Application.Models.Requests.Auth;
@@ -20,19 +21,20 @@ namespace MSP.Application.Services.Implementations.Auth
         private readonly UserManager<User> _userManager;
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
-
-        public AccountService(IAuthTokenProcessor authTokenProcessor, UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService)
+        private readonly IConfiguration _configuration;
+        public AccountService(IAuthTokenProcessor authTokenProcessor, UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IConfiguration configuration)
         {
             _authTokenProcessor = authTokenProcessor;
             _userManager = userManager;
             _userRepository = userRepository;
             _notificationService = notificationService;
+            _configuration = configuration;
         }
         public async Task<ApiResponse<string>> RegisterAsync(RegisterRequest registerRequest)
         {
             var userExists = await _userManager.FindByEmailAsync(registerRequest.Email) != null;
             if (userExists)
-                return ApiResponse<string>.ErrorResponse(null, "Email này đã được sử dụng!");
+                return ApiResponse<string>.ErrorResponse(null, "This email is already in use.");
 
             var role = registerRequest.Role switch
             {
@@ -48,9 +50,9 @@ namespace MSP.Application.Services.Implementations.Auth
                 FullName = registerRequest.FullName,
                 PhoneNumber = registerRequest.PhoneNumber,
                 SecurityStamp = Guid.NewGuid().ToString(),
-                EmailConfirmed = false, // Email chưa được xác thực
+                EmailConfirmed = false, // Email not yet confirmed
                 CreatedAt = DateTime.UtcNow,
-                IsApproved = role == UserRoleEnum.Member.ToString() // Member được approve ngay, BusinessOwner cần chờ admin
+                IsApproved = role == UserRoleEnum.Member.ToString() // Member is approved immediately, BusinessOwner needs admin approval
             };
 
             if (role == UserRoleEnum.BusinessOwner.ToString())
@@ -68,28 +70,29 @@ namespace MSP.Application.Services.Implementations.Auth
                 throw new RegistrationFailedException(result.Errors.Select(e => e.Description));
             }
             
-            // Thêm user vào role tương ứng
+            // Add user to corresponding role
             await _userManager.AddToRoleAsync(user, role);
 
             // Generate email confirmation token
             var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            // Gửi email xác nhận bằng Hangfire
-            var confirmationUrl = $"http://localhost:3000/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
+            // Send confirmation email via Hangfire
+            var clientUrl = _configuration["AppSettings:ClientUrl"];
+            var confirmationUrl = $"{clientUrl}/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
             var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FullName, confirmationUrl);
 
             _notificationService.SendEmailNotification(
                 user.Email,
-                "Xác nhận email - Meeting Support Platform",
+                "Email Confirmation - Meeting Support Platform",
                 emailBody
             );
 
-            // Thông báo khác nhau tùy theo role
+            // Different messages depending on role
             var message = role == UserRoleEnum.Member.ToString() 
-                ? "Người dùng đã được tạo thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn."
-                : "Người dùng đã được tạo thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn. Tài khoản của bạn sẽ được admin xem xét trước khi bạn có thể đăng nhập.";
+                ? "User created successfully! Please check your email to confirm your account."
+                : "User created successfully! Please check your email to confirm your account. Your account will be reviewed by an admin before you can log in.";
 
-            return ApiResponse<string>.SuccessResponse(message, "Đăng kí tài khoản thành công! Vui lòng kiểm tra email để xác nhận tài khoản của bạn.");
+            return ApiResponse<string>.SuccessResponse(message, "Account registration successful! Please check your email to confirm your account.");
         }
 
         public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest loginRequest)
@@ -97,18 +100,18 @@ namespace MSP.Application.Services.Implementations.Auth
             var user = await _userManager.FindByEmailAsync(loginRequest.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Sai email hoặc mặt khẩu.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Invalid email or password.");
             }
             if (!user.EmailConfirmed)
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Vui lòng kiểm tra và xác nhận email trước khi đăng nhập.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Please verify and confirm your email before logging in.");
             }
             
-            // Kiểm tra trạng thái approval cho BusinessOwner
+            // Check approval status for BusinessOwner
             var roles = (await _userManager.GetRolesAsync(user)).ToArray();
             if (roles.Contains(UserRoleEnum.BusinessOwner.ToString()) && !user.IsApproved)
             {
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Tài khoản của bạn đang chờ được admin duyệt. Vui lòng chờ duyệt trước khi đăng nhập.");
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account is pending admin approval. Please wait for approval before logging in.");
             }
             
             var (jwtToken, expiresAtUtc) = _authTokenProcessor.GenerateJwtToken(user, roles);
@@ -125,7 +128,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 AccessToken = jwtToken,
                 RefreshToken = refreshToken
             };
-            return ApiResponse<LoginResponse>.SuccessResponse(response, "Đăng nhập thành công.");
+            return ApiResponse<LoginResponse>.SuccessResponse(response, "Login successful.");
         }
 
         public async Task<ApiResponse<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest googleLoginRequest)
@@ -152,7 +155,7 @@ namespace MSP.Application.Services.Implementations.Auth
                     AccessToken = existingJwtToken,
                     RefreshToken = existingRefreshToken
                 };
-                return ApiResponse<LoginResponse>.SuccessResponse(existingResponse, "Đăng nhập Google thành công.");
+                return ApiResponse<LoginResponse>.SuccessResponse(existingResponse, "Google login successful.");
             }
 
             // Check if user exists by email but not Google ID (merge accounts)
@@ -181,7 +184,7 @@ namespace MSP.Application.Services.Implementations.Auth
                     AccessToken = emailJwtToken,
                     RefreshToken = emailRefreshToken
                 };
-                return ApiResponse<LoginResponse>.SuccessResponse(emailResponse, "Tài khoản Google đã được liên kết thành công.");
+                return ApiResponse<LoginResponse>.SuccessResponse(emailResponse, "Google account linked successfully.");
             }
 
             // User doesn't exist - Auto register as Member
@@ -202,7 +205,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 SecurityStamp = Guid.NewGuid().ToString(),
                 EmailConfirmed = true, // Google accounts are pre-verified
                 CreatedAt = DateTime.UtcNow,
-                IsApproved = true, // Member được approve ngay
+                IsApproved = true, // Member is approved immediately
                 IsActive = true
             };
 
@@ -211,17 +214,17 @@ namespace MSP.Application.Services.Implementations.Auth
             if (!createResult.Succeeded)
             {
                 var errors = createResult.Errors.Select(e => e.Description);
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Không thể tạo tài khoản người dùng.", errors);
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Unable to create user account.", errors);
             }
 
-            // Thêm user vào role Member
+            // Add user to Member role
             var addRoleResult = await _userManager.AddToRoleAsync(newUser, UserRoleEnum.Member.ToString());
             if (!addRoleResult.Succeeded)
             {
-                // Rollback: xóa user đã tạo nếu không thêm được role
+                // Rollback: delete created user if role assignment fails
                 await _userManager.DeleteAsync(newUser);
                 var errors = addRoleResult.Errors.Select(e => e.Description);
-                return ApiResponse<LoginResponse>.ErrorResponse(null, "Không thể gán quyền cho người dùng.", errors);
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Unable to assign role to user.", errors);
             }
 
             // Generate tokens for new user
@@ -237,22 +240,22 @@ namespace MSP.Application.Services.Implementations.Auth
             _authTokenProcessor.WriteAuthTokenAsHttpOnlyCookie("ACCESS_TOKEN", jwtToken, expiresAtUtc);
             _authTokenProcessor.WriteAuthTokenAsHttpOnlyCookie("REFRESH_TOKEN", refreshToken, refreshTokenExpiry);
 
-            // Tạo notification in-app chào mừng user mới
+            // Create in-app notification to welcome new user
             try
             {
                 await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
                 {
                     UserId = newUser.Id,
-                    Title = "Chào mừng đến với MSP",
-                    Message = $"Hi {newUser.FullName}, chào mừng bạn đến với nền tảng hỗ trợ các cuộc họp! Tài khoản của bạn đã được tạo thành công thông qua Google.",
+                    Title = "Welcome to MSP",
+                    Message = $"Hi {newUser.FullName}, welcome to the meeting support platform! Your account has been successfully created via Google.",
                     Type = NotificationTypeEnum.InApp.ToString(),
                     Data = $"{{\"eventType\":\"GoogleAccountCreated\",\"userId\":\"{newUser.Id}\",\"provider\":\"Google\"}}"
                 });
             }
             catch (Exception)
             {
-                // Log error nhưng không fail request vì notification không critical
-                // Notification failure không ảnh hưởng đến flow đăng ký
+                // Log error but don't fail request as notification is not critical
+                // Notification failure does not affect registration flow
             }
 
             var response = new LoginResponse
@@ -261,7 +264,7 @@ namespace MSP.Application.Services.Implementations.Auth
                 RefreshToken = refreshToken
             };
 
-            return ApiResponse<LoginResponse>.SuccessResponse(response, "Tài khoản Google đã được đăng ký và đăng nhập thành công.");
+            return ApiResponse<LoginResponse>.SuccessResponse(response, "Google account registered and logged in successfully.");
         }
 
         public async Task<ApiResponse<RefreshTokenResponse>> RefreshTokenAsync(string? refreshToken)
@@ -306,7 +309,7 @@ namespace MSP.Application.Services.Implementations.Auth
 
             if (user.EmailConfirmed)
             {
-                return ApiResponse<string>.SuccessResponse("Email already confirmed.", "Email đã được xác nhận thành công.");
+                return ApiResponse<string>.SuccessResponse("Email already confirmed.", "Email has been confirmed successfully.");
             }
 
             var result = await _userManager.ConfirmEmailAsync(user, confirmEmailRequest.Token);
@@ -315,17 +318,17 @@ namespace MSP.Application.Services.Implementations.Auth
                 return ApiResponse<string>.ErrorResponse(null, "Invalid confirmation token.");
             }
 
-            // Tạo notification in-app lưu vào DB
+            // Create in-app notification and save to DB
             await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
             {
                 UserId = user.Id,
-                Title = "Chào mừng đến với MSP",
-                Message = $"Hi {user.FullName}, chào mừng bạn đến với nền tảng hỗ trợ các cuộc họp!",
+                Title = "Welcome to MSP",
+                Message = $"Hi {user.FullName}, welcome to the meeting support platform!",
                 Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
                 Data = $"{{\"eventType\":\"EmailConfirmed\",\"userId\":\"{user.Id}\"}}"
             });
 
-            return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email đã được xác nhận thành công.");
+            return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email has been confirmed successfully.");
         }
 
         public async Task<ApiResponse<string>> ResendConfirmationEmailAsync(ResendConfirmationEmailRequest resendRequest)
@@ -346,6 +349,35 @@ namespace MSP.Application.Services.Implementations.Auth
             return ApiResponse<string>.SuccessResponse("Confirmation email sent successfully!", "Please check your email for confirmation instructions.");
         }
 
+        public async Task<ApiResponse<string>> LogoutAsync(string? userId = null)
+        {
+            try
+            {
+                // Clear authentication cookies
+                _authTokenProcessor.ClearAuthTokenCookies();
+
+                // Invalidate refresh token in database if userId is provided
+                if (!string.IsNullOrEmpty(userId) && Guid.TryParse(userId, out var userGuid))
+                {
+                    var user = await _userManager.FindByIdAsync(userGuid.ToString());
+                    if (user != null)
+                    {
+                        // Clear refresh token to invalidate it
+                        user.RefreshToken = null;
+                        user.RefreshTokenExpiresAtUtc = null;
+                        await _userManager.UpdateAsync(user);
+                    }
+                }
+
+                return ApiResponse<string>.SuccessResponse("Logged out successfully.", "Đăng xuất thành công.");
+            }
+            catch (Exception ex)
+            {
+                // Still return success even if token clearing fails
+                // The important part is that cookies are cleared on client side
+                return ApiResponse<string>.SuccessResponse("Logged out successfully.", "Đăng xuất thành công.");
+            }
+        }
 
 
     }

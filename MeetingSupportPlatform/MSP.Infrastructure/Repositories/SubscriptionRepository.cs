@@ -32,6 +32,15 @@ namespace MSP.Infrastructure.Repositories
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<Subscription>> GetAllAsync()
+        {
+            return await _context.Subscriptions
+                .Include(s => s.Package)
+                .ThenInclude(p => p.Limitations)
+                .Include(s => s.User)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+        }
 
         public async Task<Subscription?> GetActiveSubscriptionByUserIdAsync(Guid userId)
         {
@@ -42,6 +51,17 @@ namespace MSP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
         }
 
+
+        public async Task<IEnumerable<Subscription>> GetExpiredTodayAsync()
+        {
+            var today = DateTime.UtcNow.Date;
+
+            return await _context.Subscriptions
+                .Where(s => s.EndDate.HasValue
+                            && s.EndDate.Value.Date == today
+                            && s.IsActive)
+                .ToListAsync();
+        }
 
     }
 }
