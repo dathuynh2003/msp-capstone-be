@@ -45,5 +45,16 @@ namespace MSP.WebAPI.Controllers
 
             return Ok(response);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllSubscriptions()
+        {
+            var response = await _subscriptionService.GetAllSubscriptionsAsync();
+
+            if (!response.Success)
+                return NotFound(response);
+
+            return Ok(response);
+        }
     }
 }
