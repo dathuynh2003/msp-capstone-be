@@ -32,6 +32,15 @@ namespace MSP.Infrastructure.Repositories
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();
         }
+        public async Task<IEnumerable<Subscription>> GetAllAsync()
+        {
+            return await _context.Subscriptions
+                .Include(s => s.Package)
+                .ThenInclude(p => p.Limitations)
+                .Include(s => s.User)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+        }
 
         public async Task<Subscription?> GetActiveSubscriptionByUserIdAsync(Guid userId)
         {

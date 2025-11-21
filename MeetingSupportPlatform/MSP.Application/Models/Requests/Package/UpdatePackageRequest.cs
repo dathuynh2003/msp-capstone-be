@@ -8,7 +8,6 @@ namespace MSP.Application.Models.Requests.Package
 {
     public class UpdatePackageRequest
     {
-        public Guid Id { get; set; }
         public string Name { get; set; }
         public string? Description { get; set; }
         public decimal Price { get; set; }
