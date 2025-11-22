@@ -1,4 +1,5 @@
-﻿using MSP.Application.Models.Requests.Project;
+﻿using Microsoft.AspNetCore.Mvc;
+using MSP.Application.Models.Requests.Project;
 using MSP.Application.Models.Responses.Project;
 using MSP.Shared.Common;
 
@@ -19,5 +20,6 @@ namespace MSP.Application.Services.Interfaces.Project
         Task<ApiResponse<List<GetProjectMemberResponse>>> GetProjectMembersAsync(Guid projectId);
         Task<ApiResponse<List<GetProjectMemberResponse>>> GetProjectMembersByRoleAsync(Guid projectId, string role);
         Task<ApiResponse<List<GetProjectMemberResponse>>> GetProjectManagersAsync(Guid projectId);
+        Task<ApiResponse<ProjectDetailResponse>> GetProjectDetail(Guid projectId, Guid userId);
     }
 }

@@ -115,5 +115,30 @@ namespace MSP.Infrastructure.Repositories
             }
             return await query.CountAsync();
         }
+
+        public async Task<Project> GetProjectDetailWithPMAsync(Guid projectId, Guid userId)
+        {
+            var rs = await _context.Projects
+                .Where(p => p.Id == projectId && !p.IsDeleted)
+                .Include(p => p.Owner)
+                .Include(p => p.CreatedBy)
+                .Include(p => p.ProjectMembers).ThenInclude(m => m.Member)
+                .Include(p => p.ProjectTasks).ThenInclude(t => t.User)
+                .FirstOrDefaultAsync();
+            return rs;
+        }
+
+        public Task<Project> GetProjectDetailWithMemberAsync(Guid projectId, Guid userId)
+        {
+            var rs = _context.Projects
+                .Where(p => p.Id == projectId && !p.IsDeleted)
+                .Include(p => p.Owner)
+                .Include(p => p.CreatedBy)
+                .Include(p => p.ProjectMembers).ThenInclude(m => m.Member)
+                .Include(p => p.ProjectTasks).ThenInclude(t => t.User)
+                .FirstOrDefaultAsync();
+
+            return rs;
+        }
     }
 }

@@ -495,7 +495,7 @@ namespace MSP.Application.Services.Implementations.Project
             }
 
             var oldStatus = project.Status;
-            
+
             project.Name = request.Name;
             project.Description = request.Description;
             project.StartDate = request.StartDate;
@@ -506,18 +506,18 @@ namespace MSP.Application.Services.Implementations.Project
             await _projectRepository.UpdateAsync(project);
 
             // TRIGGER: Cancel all active tasks (except Done) when project status changes to Completed or Cancelled
-            if (oldStatus != request.Status && 
-                (request.Status == ProjectStatusEnum.Completed.ToString() || 
+            if (oldStatus != request.Status &&
+                (request.Status == ProjectStatusEnum.Completed.ToString() ||
                  request.Status == ProjectStatusEnum.Cancelled.ToString()))
             {
                 try
                 {
                     // Get all tasks of the project
                     var projectTasks = await _projectTaskRepository.GetTasksByProjectIdAsync(request.Id);
-                    
+
                     // Filter tasks that are not Done or already Cancelled
                     var tasksToCancel = projectTasks
-                        .Where(t => t.Status != TaskEnum.Done.ToString() && 
+                        .Where(t => t.Status != TaskEnum.Done.ToString() &&
                                    t.Status != TaskEnum.Cancelled.ToString())
                         .ToList();
 
@@ -535,7 +535,7 @@ namespace MSP.Application.Services.Implementations.Project
                                 var taskNotification = new CreateNotificationRequest
                                 {
                                     UserId = task.UserId.Value,
-                                    Title = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                    Title = request.Status == ProjectStatusEnum.Completed.ToString()
                                         ? "Công việc bị hủy do dự án hoàn thành"
                                         : "Công việc bị hủy do dự án bị hủy",
                                     Message = $"Công việc '{task.Title}' đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
@@ -548,8 +548,8 @@ namespace MSP.Application.Services.Implementations.Project
                                         ProjectId = project.Id,
                                         ProjectName = project.Name,
                                         NewStatus = TaskEnum.Cancelled.ToString(),
-                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString() 
-                                            ? "ProjectCompleted" 
+                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString()
+                                            ? "ProjectCompleted"
                                             : "ProjectCancelled"
                                     })
                                 };
@@ -563,7 +563,7 @@ namespace MSP.Application.Services.Implementations.Project
                                 var reviewerNotification = new CreateNotificationRequest
                                 {
                                     UserId = task.ReviewerId.Value,
-                                    Title = request.Status == ProjectStatusEnum.Completed.ToString() 
+                                    Title = request.Status == ProjectStatusEnum.Completed.ToString()
                                         ? "Công việc review bị hủy do dự án hoàn thành"
                                         : "Công việc review bị hủy do dự án bị hủy",
                                     Message = $"Công việc '{task.Title}' mà bạn đang review đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
@@ -576,8 +576,8 @@ namespace MSP.Application.Services.Implementations.Project
                                         ProjectId = project.Id,
                                         ProjectName = project.Name,
                                         NewStatus = TaskEnum.Cancelled.ToString(),
-                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString() 
-                                            ? "ProjectCompleted" 
+                                        Reason = request.Status == ProjectStatusEnum.Completed.ToString()
+                                            ? "ProjectCompleted"
                                             : "ProjectCancelled"
                                     })
                                 };
@@ -597,7 +597,7 @@ namespace MSP.Application.Services.Implementations.Project
             }
 
             // Check if project status changed to Completed
-            if (oldStatus != ProjectStatusEnum.Completed.ToString() && 
+            if (oldStatus != ProjectStatusEnum.Completed.ToString() &&
                 request.Status == ProjectStatusEnum.Completed.ToString())
             {
                 try
@@ -693,7 +693,7 @@ namespace MSP.Application.Services.Implementations.Project
             }
 
             // Check if project status changed to Cancelled
-            if (oldStatus != ProjectStatusEnum.Cancelled.ToString() && 
+            if (oldStatus != ProjectStatusEnum.Cancelled.ToString() &&
                 request.Status == ProjectStatusEnum.Cancelled.ToString())
             {
                 try
@@ -904,5 +904,70 @@ namespace MSP.Application.Services.Implementations.Project
             return await GetProjectMembersByRoleAsync(projectId, "ProjectManager");
         }
 
+        public async Task<ApiResponse<ProjectDetailResponse>> GetProjectDetail(Guid projectId, Guid userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            var userRoles = user != null ? await _userManager.GetRolesAsync(user) : new List<string>();
+            var isPM = userRoles.Contains(UserRoleEnum.ProjectManager.ToString());
+
+            var rs = isPM
+                ? await _projectRepository.GetProjectDetailWithPMAsync(projectId, userId)
+                : await _projectRepository.GetProjectDetailWithMemberAsync(projectId, userId);
+
+            if (rs == null)
+                return ApiResponse<ProjectDetailResponse>.ErrorResponse(null, "Project not found");
+
+            var result = new ProjectDetailResponse
+            {
+                ProjectId = rs.Id,
+                Name = rs.Name,
+                Description = rs.Description,
+                StartDate = rs.StartDate,
+                EndDate = rs.EndDate,
+                Status = rs.Status,
+                Owner = new UserDto
+                {
+                    UserId = rs.Owner.Id,
+                    FullName = rs.Owner.FullName,
+                    Email = rs.Owner.Email,
+                    AvatarUrl = rs.Owner.AvatarUrl,
+                },
+                ProjectManager = new UserDto
+                {
+                    UserId = rs.CreatedBy.Id,
+                    FullName = rs.CreatedBy.FullName,
+                    Email = rs.CreatedBy.Email,
+                    AvatarUrl = rs.CreatedBy.AvatarUrl,
+                },
+                Members = rs.ProjectMembers.Select(pm => new ProjectMemberDto
+                {
+                    MemberId = pm.Member.Id,
+                    FullName = pm.Member.FullName,
+                    Email = pm.Member.Email,
+                    AvatarUrl = pm.Member.AvatarUrl,
+                }).ToList(),
+                Tasks = rs.ProjectTasks
+                    .Where(pt => isPM || pt.UserId == userId)
+                    .Select(pt => new ProjectTaskDto
+                    {
+                        TaskId = pt.Id,
+                        Title = pt.Title,
+                        Description = pt.Description,
+                        Status = pt.Status,
+                        StartDate = pt.StartDate,
+                        EndDate = pt.EndDate,
+                        IsOverdue = pt.EndDate.HasValue && pt.EndDate < DateTime.UtcNow && pt.Status != TaskEnum.Done.ToString(),
+                        Assignee = pt.User != null ? new UserDto
+                        {
+                            UserId = pt.User.Id,
+                            FullName = pt.User.FullName,
+                            Email = pt.User.Email,
+                            AvatarUrl = pt.User.AvatarUrl,
+                        } : null
+                    }).ToList()
+            };
+
+            return ApiResponse<ProjectDetailResponse>.SuccessResponse(result);
+        }
     }
 }

@@ -182,5 +182,17 @@ namespace MSP.WebAPI.Controllers
             }
             return Ok(response);
         }
+
+        [HttpGet("{projectId}/by-user/{userId}")]
+        public async Task<IActionResult> GetProjectDetailByUserId([FromRoute] Guid projectId, [FromRoute] Guid userId)
+        {
+            var response = await _projectService.GetProjectDetail(projectId, userId);
+            if (!response.Success)
+            {
+                _logger.LogError("GetProjectsByUserId failed: {Message}", response.Message);
+                return Ok(response);
+            }
+            return Ok(response);
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using MSP.Application.Abstracts;
+using MSP.Application.Models.Responses.Project;
 using MSP.Domain.Entities;
 
 namespace MSP.Application.Repositories
@@ -14,6 +15,9 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<Project>> GetProjectsNearingDeadlineAsync(DateTime currentTime, DateTime deadlineThreshold, string inProgressStatus);
         Task<IEnumerable<Project>> GetOverdueInProgressProjectsAsync(DateTime currentTime, string inProgressStatus);
         Task<int> CountProjectsAsync(Guid userId, DateTime? startDate, DateTime? endDate);
+        Task<Project> GetProjectDetailWithPMAsync(Guid projectId, Guid userId);
+        Task<Project> GetProjectDetailWithMemberAsync(Guid projectId, Guid userId);
+
 
     }
 }
