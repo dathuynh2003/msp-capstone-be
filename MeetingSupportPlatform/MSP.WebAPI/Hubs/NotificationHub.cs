@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace MSP.WebAPI.Hubs
@@ -22,24 +22,44 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            // Debug: Log all available claims
+            _logger.LogInformation("🔍 [SignalR] OnConnectedAsync - All claims:");
+            if (Context.User?.Claims != null)
+            {
+                foreach (var claim in Context.User.Claims)
+                {
+                    _logger.LogInformation($"   - {claim.Type} = {claim.Value}");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("⚠️ [SignalR] Context.User.Claims is NULL!");
+            }
+
+            // Try multiple ways to extract userId
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
+
+            _logger.LogInformation($"🔍 [SignalR] Extracted userId: {userId ?? "NULL"}");
 
             if (!string.IsNullOrEmpty(userId))
             {
                 // Add user to their personal group
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
-                
+
                 _logger.LogInformation(
-                    "User {UserId} connected to NotificationHub with ConnectionId {ConnectionId}",
+                    "✅ [SignalR] User {UserId} connected to NotificationHub with ConnectionId {ConnectionId}",
                     userId,
                     Context.ConnectionId);
             }
             else
             {
                 _logger.LogWarning(
-                    "Anonymous user connected with ConnectionId {ConnectionId}",
-                    Context.ConnectionId);
+                    "⚠️ [SignalR] Anonymous/Unknown user connected with ConnectionId {ConnectionId}. User.Identity.IsAuthenticated={IsAuth}",
+                    Context.ConnectionId,
+                    Context.User?.Identity?.IsAuthenticated ?? false);
             }
 
             await base.OnConnectedAsync();
@@ -50,21 +70,23 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
 
             if (!string.IsNullOrEmpty(userId))
             {
                 _logger.LogInformation(
-                    "User {UserId} disconnected from NotificationHub with ConnectionId {ConnectionId}",
+                    "🔌 [SignalR] User {UserId} disconnected from NotificationHub with ConnectionId {ConnectionId}",
                     userId,
                     Context.ConnectionId);
             }
 
             if (exception != null)
             {
-                _logger.LogError(exception, 
-                    "User disconnected with error. ConnectionId: {ConnectionId}",
+                _logger.LogError(exception,
+                    "❌ [SignalR] User disconnected with error. ConnectionId: {ConnectionId}",
                     Context.ConnectionId);
             }
 
@@ -77,9 +99,9 @@ namespace MSP.WebAPI.Hubs
         public async Task JoinGroup(string groupName)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-            
+
             _logger.LogInformation(
-                "ConnectionId {ConnectionId} joined group {GroupName}",
+                "➕ [SignalR] ConnectionId {ConnectionId} joined group {GroupName}",
                 Context.ConnectionId,
                 groupName);
         }
@@ -90,9 +112,9 @@ namespace MSP.WebAPI.Hubs
         public async Task LeaveGroup(string groupName)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
-            
+
             _logger.LogInformation(
-                "ConnectionId {ConnectionId} left group {GroupName}",
+                "➖ [SignalR] ConnectionId {ConnectionId} left group {GroupName}",
                 Context.ConnectionId,
                 groupName);
         }
@@ -102,12 +124,14 @@ namespace MSP.WebAPI.Hubs
         /// </summary>
         public async Task MarkNotificationAsRead(Guid notificationId)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? Context.User?.FindFirst("userId")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                      ?? Context.User?.FindFirst("userId")?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
 
             _logger.LogInformation(
-                "User {UserId} marked notification {NotificationId} as read",
-                userId,
+                "✓ [SignalR] User {UserId} marked notification {NotificationId} as read",
+                userId ?? "UNKNOWN",
                 notificationId);
 
             // Broadcast to other devices of the same user
