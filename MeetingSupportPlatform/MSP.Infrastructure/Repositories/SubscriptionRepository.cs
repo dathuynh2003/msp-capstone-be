@@ -28,7 +28,7 @@ namespace MSP.Infrastructure.Repositories
                 .Include(s => s.Package)
                 .ThenInclude(p => p.Limitations)
                 .Include(s => s.User)
-                .Where(s => s.UserId == userId && s.Status == PaymentEnum.Paid.ToString().ToUpper())
+                .Where(s => s.TotalPrice != 0 && s.UserId == userId && s.Status == PaymentEnum.Paid.ToString().ToUpper())
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();
         }
@@ -51,6 +51,22 @@ namespace MSP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.IsActive);
         }
 
+        public async Task<IEnumerable<Subscription>> GetExpiredTodayAsync()
+        {
+            var today = DateTime.UtcNow.Date;
 
+            return await _context.Subscriptions
+                .Where(s => s.EndDate.HasValue
+                            && s.EndDate.Value.Date == today
+                            && s.IsActive)
+                .ToListAsync();
+        }
+
+        public Task<Subscription?> GetFreeSubscriptionByUserAsync(Guid userId)
+        {
+            return _context.Subscriptions
+                .Where(x => x.UserId == userId && x.TotalPrice == 0)
+                .FirstOrDefaultAsync();
+        }
     }
 }

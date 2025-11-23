@@ -4,6 +4,7 @@ using MSP.Application.Services.Implementations.ProjectTask;
 using MSP.Application.Services.Implementations.Meeting;
 using MSP.Application.Services.Implementations.Cleanup;
 using MSP.Application.Services.Implementations.Project;
+using MSP.Application.Services.Implementations.SubscriptionService;
 
 namespace MSP.Application.Extensions
 {
@@ -178,6 +179,15 @@ namespace MSP.Application.Extensions
                 "send-project-completion-reminders",
                 service => service.SendCompletionRemindersAsync(),
                 Cron.Daily(),
+                new RecurringJobOptions
+                {
+                    TimeZone = vietnamTimeZone
+                });
+
+            RecurringJob.AddOrUpdate<SubscriptionStatusCronJobService>(
+                "expire-subscriptions",
+                service => service.ExpireSubscriptionsAsync(),
+                Cron.Daily(), // run daily at 00:00
                 new RecurringJobOptions
                 {
                     TimeZone = vietnamTimeZone
