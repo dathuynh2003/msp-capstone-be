@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSP.Shared", "MSP.Shared\MS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSP.WebAPI", "MSP.WebAPI\MSP.WebAPI.csproj", "{375DAC92-8DA3-412B-8A1D-CB3BAD6DB34E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSP.Tests", "MSP.Tests\MSP.Tests.csproj", "{C5D5E5E5-E5E5-E5E5-E5E5-E5E5E5E5E5E5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{375DAC92-8DA3-412B-8A1D-CB3BAD6DB34E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{375DAC92-8DA3-412B-8A1D-CB3BAD6DB34E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{375DAC92-8DA3-412B-8A1D-CB3BAD6DB34E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5D5E5E5-E5E5-E5E5-E5E5-E5E5E5E5E5E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5D5E5E5-E5E5-E5E5-E5E5-E5E5E5E5E5E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5D5E5E5-E5E5-E5E5-E5E5-E5E5E5E5E5E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5D5E5E5-E5E5-E5E5-E5E5-E5E5E5E5E5E5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
