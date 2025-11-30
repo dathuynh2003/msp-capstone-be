@@ -74,5 +74,39 @@
                         </body>
                         </html>";
         }
+
+        public static string ResetPasswordNotification(
+            string Fullname,
+            string resetPasswordUrl
+        )
+        {
+            return $@"
+                        <html>
+                        <body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff7f0;'>
+                            <div style='background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center;'>
+                                <h2 style='color: #d35400; margin-bottom: 20px;'>Password Reset Request</h2>
+                                <p style='color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;'>
+                                    Hello <strong>{Fullname}</strong>,
+                                </p>
+                                <p style='color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 30px;'>
+                                    We received a request to reset your password. Click the button below to proceed with resetting your password.
+                                </p>
+                                <div style='margin: 30px 0;'>
+                                    <a href='{resetPasswordUrl}'
+                                       style='background-color: #ff6f00; color: white; padding: 15px 35px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;'>
+                                        Reset Password
+                                    </a>
+                                </div>
+                                <p style='color: #999999; font-size: 12px; margin-top: 20px;'>
+                                    This link will expire in 1 hour for security reasons.
+                                </p>
+                                <hr style='border: none; border-top: 1px solid #eee; margin: 30px 0;'/>
+                                <p style='color: #999999; font-size: 12px;'>
+                                    Best regards,<br/>Meeting Support Platform Team
+                                </p>
+                            </div>
+                        </body>
+                        </html>";
+        }
     }
 }

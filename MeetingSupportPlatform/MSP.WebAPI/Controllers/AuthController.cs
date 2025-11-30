@@ -56,13 +56,13 @@ namespace MSP.WebAPI.Controllers
             {
                 return BadRequest("Email and token are required.");
             }
-            
+
             var confirmEmailRequest = new ConfirmEmailRequest
             {
                 Email = email,
                 Token = token
             };
-            
+
             var result = await _accountService.ConfirmEmailAsync(confirmEmailRequest);
             return Ok(result);
         }
@@ -98,5 +98,27 @@ namespace MSP.WebAPI.Controllers
             return Ok(result);
         }
 
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest forgotPasswordRequest)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _accountService.ForgotPasswordAsync(forgotPasswordRequest);
+            return Ok(result);
+
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest resetPasswordRequest)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var result = await _accountService.ResetPasswordAsync(resetPasswordRequest);
+            return Ok(result);
+        }
     }
 }

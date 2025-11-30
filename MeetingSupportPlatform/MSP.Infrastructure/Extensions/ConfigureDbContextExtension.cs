@@ -17,11 +17,11 @@ namespace MSP.Infrastructure.Extensions
 
             services.AddIdentityCore<User>(opt =>
             {
-                opt.Password.RequireDigit = true;
-                opt.Password.RequireLowercase = true;
-                opt.Password.RequireUppercase = true;
-                opt.Password.RequireNonAlphanumeric = true;
-                opt.Password.RequiredLength = 8;
+                opt.Password.RequireDigit = false;
+                opt.Password.RequireLowercase = false;
+                opt.Password.RequireUppercase = false;
+                opt.Password.RequireNonAlphanumeric = false;
+                opt.Password.RequiredLength = 6;
                 opt.User.RequireUniqueEmail = true;
             })
             .AddRoles<IdentityRole<Guid>>()

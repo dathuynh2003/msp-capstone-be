@@ -379,6 +379,40 @@ namespace MSP.Application.Services.Implementations.Auth
             }
         }
 
+        public async Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequest forgotPasswordRequest)
+        {
+            var user = await _userManager.FindByEmailAsync(forgotPasswordRequest.Email);
+            if (user == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
+            }
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var clientUrl = _configuration["AppSettings:ClientUrl"];
+            var resetUrl = $"{clientUrl}/reset-password?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(resetToken)}";
+            var emailBody = EmailNotificationTemplate.ResetPasswordNotification(user.FullName, resetUrl);
+            _notificationService.SendEmailNotification(
+                user.Email,
+                "Password Reset - Meeting Support Platform",
+                emailBody
+            );
+            return ApiResponse<string>.SuccessResponse(null, "Password reset email sent successfully! Please check your email.");
 
+        }
+
+        public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest resetPasswordRequest)
+        {
+            var user = await _userManager.FindByEmailAsync(resetPasswordRequest.Email);
+            if (user == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
+            }
+            var result = await _userManager.ResetPasswordAsync(user, resetPasswordRequest.Token, resetPasswordRequest.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description);
+                return ApiResponse<string>.ErrorResponse(null, "Password reset failed.", errors);
+            }
+            return ApiResponse<string>.SuccessResponse(null, "Password has been reset successfully.");
+        }
     }
 }

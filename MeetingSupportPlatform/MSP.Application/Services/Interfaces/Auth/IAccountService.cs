@@ -14,5 +14,8 @@ namespace MSP.Application.Services.Interfaces.Auth
         Task<ApiResponse<string>> ResendConfirmationEmailAsync(ResendConfirmationEmailRequest resendRequest);
         Task<ApiResponse<string>> LogoutAsync(string? userId = null);
 
+        Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequest forgotPasswordRequest);
+        Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest resetPasswordRequest);
+
     }
 }
