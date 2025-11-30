@@ -457,6 +457,24 @@ namespace MSP.Application.Services.Implementations.Users
                 return ApiResponse<string>.ErrorResponse($"Error removing member from organization: {ex.Message}");
             }
         }
+
+        public async Task<ApiResponse<string>> UpdateUserProfileAsync(Guid userId, UpdateUserProfileRequest request)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
+            }
+            user.FullName = request.FullName ?? user.FullName;
+            user.PhoneNumber = request.PhoneNumber ?? user.PhoneNumber;
+            user.AvatarUrl = request.AvatarUrl ?? user.AvatarUrl;
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "Failed to update user profile.");
+            }
+            return ApiResponse<string>.SuccessResponse(null, "User profile has been updated successfully.");
+        }
     }
 }
 

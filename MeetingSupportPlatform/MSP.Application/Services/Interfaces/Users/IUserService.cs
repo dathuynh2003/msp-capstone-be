@@ -20,6 +20,8 @@ namespace MSP.Application.Services.Interfaces.Users
         Task<ApiResponse<BusinessReponse>> GetBusinessDetail(Guid businessOwnerId);
         Task<ApiResponse<string>> RemoveMemberFromOrganizationAsync(Guid businessOwnerId, Guid memberId);
 
+        Task<ApiResponse<string>> UpdateUserProfileAsync(Guid userId, UpdateUserProfileRequest request);
+
     }
 }
 

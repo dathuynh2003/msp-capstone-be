@@ -109,5 +109,13 @@ namespace MSP.WebAPI.Controllers
             return Ok(result);
         }
 
+        [HttpPut("update-profile/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUserProfile([FromRoute] Guid userId, [FromBody] UpdateUserProfileRequest request)
+        {
+            var result = await _userService.UpdateUserProfileAsync(userId, request);
+            return Ok(result);
+        }
+
     }
 }
