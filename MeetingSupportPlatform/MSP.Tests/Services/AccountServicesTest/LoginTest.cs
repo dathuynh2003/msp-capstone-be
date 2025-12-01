@@ -20,6 +20,7 @@ namespace MSP.Tests.Services.AccountServicesTest
         private readonly Mock<IUserRepository> _mockUserRepository;
         private readonly Mock<INotificationService> _mockNotificationService;
         private readonly Mock<IConfiguration> _mockConfiguration;
+        private readonly Mock<IGoogleTokenValidator> _mockGoogleTokenValidator;
         private readonly IAccountService _accountService;
 
         public LoginTest()
@@ -32,13 +33,15 @@ namespace MSP.Tests.Services.AccountServicesTest
             _mockUserRepository = new Mock<IUserRepository>();
             _mockNotificationService = new Mock<INotificationService>();
             _mockConfiguration = new Mock<IConfiguration>();
+            _mockGoogleTokenValidator = new Mock<IGoogleTokenValidator>();
 
             _accountService = new AccountService(
                 _mockAuthTokenProcessor.Object,
                 _mockUserManager.Object,
                 _mockUserRepository.Object,
                 _mockNotificationService.Object,
-                _mockConfiguration.Object
+                _mockConfiguration.Object,
+                _mockGoogleTokenValidator.Object
             );
         }
 

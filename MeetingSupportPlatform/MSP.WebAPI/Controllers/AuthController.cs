@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MSP.Application.Models.Requests;
 using MSP.Shared.Enums;
+using MSP.WebAPI.Filters;
 
 namespace MSP.WebAPI.Controllers
 {
@@ -17,6 +18,7 @@ namespace MSP.WebAPI.Controllers
         {
             _accountService = accountService;
         }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
         {
@@ -27,7 +29,9 @@ namespace MSP.WebAPI.Controllers
             var result = await _accountService.RegisterAsync(registerRequest);
             return Ok(result);
         }
+
         [HttpPost("login")]
+        [RateLimit(maxRequests: 5, timeWindowSeconds: 60)] // 5 requests per minute
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
         {
             if (!ModelState.IsValid)
@@ -39,6 +43,7 @@ namespace MSP.WebAPI.Controllers
         }
 
         [HttpPost("google-login")]
+        [RateLimit(maxRequests: 10, timeWindowSeconds: 60)] // 10 requests per minute for Google login
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest googleLoginRequest)
         {
             if (!ModelState.IsValid)

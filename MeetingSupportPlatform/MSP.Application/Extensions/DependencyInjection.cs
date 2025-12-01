@@ -44,6 +44,7 @@ namespace MSP.Application.Extensions
         {
             // Register Business Services
             services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
             services.AddScoped<INotificationService, MSP.Application.Services.Implementations.Notification.NotificationService>();
             services.AddScoped<ISummarizeTextService, SummarizeTextService>();
             services.AddScoped<IProjectService, ProjectService>();

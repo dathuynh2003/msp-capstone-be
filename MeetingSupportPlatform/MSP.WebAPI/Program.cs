@@ -14,6 +14,9 @@ builder.Services.AddInfrastuctureService(builder.Configuration);
 builder.Services.AddApplicationService(builder.Configuration);
 builder.Services.AddAuthorization();
 
+// Add Memory Cache for Rate Limiting
+builder.Services.AddMemoryCache();
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

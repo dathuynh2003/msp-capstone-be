@@ -22,13 +22,22 @@ namespace MSP.Application.Services.Implementations.Auth
         private readonly IUserRepository _userRepository;
         private readonly INotificationService _notificationService;
         private readonly IConfiguration _configuration;
-        public AccountService(IAuthTokenProcessor authTokenProcessor, UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IConfiguration configuration)
+        private readonly IGoogleTokenValidator _googleTokenValidator;
+
+        public AccountService(
+            IAuthTokenProcessor authTokenProcessor, 
+            UserManager<User> userManager, 
+            IUserRepository userRepository, 
+            INotificationService notificationService, 
+            IConfiguration configuration,
+            IGoogleTokenValidator googleTokenValidator)
         {
             _authTokenProcessor = authTokenProcessor;
             _userManager = userManager;
             _userRepository = userRepository;
             _notificationService = notificationService;
             _configuration = configuration;
+            _googleTokenValidator = googleTokenValidator;
         }
         public async Task<ApiResponse<string>> RegisterAsync(RegisterRequest registerRequest)
         {
@@ -133,13 +142,40 @@ namespace MSP.Application.Services.Implementations.Auth
 
         public async Task<ApiResponse<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest googleLoginRequest)
         {
+            // Step 1: Verify Google ID Token
+            var validatedUser = await _googleTokenValidator.ValidateGoogleTokenAsync(googleLoginRequest.IdToken);
+            
+            if (validatedUser == null)
+            {
+                return ApiResponse<LoginResponse>.ErrorResponse(null, "Invalid Google token. Authentication failed.");
+            }
+
+            // Use validated data from Google, not from client
+            var googleId = validatedUser.GoogleId;
+            var email = validatedUser.Email;
+            var firstName = validatedUser.FirstName;
+            var lastName = validatedUser.LastName;
+            var avatarUrl = validatedUser.AvatarUrl;
+
             // Check if user exists by Google ID
-            var existingUser = await _userRepository.GetUserByGoogleIdAsync(googleLoginRequest.GoogleId);
+            var existingUser = await _userRepository.GetUserByGoogleIdAsync(googleId);
 
             if (existingUser != null)
             {
-                // User exists, generate tokens and return
+                // Step 2: Check if account is active
+                if (!existingUser.IsActive)
+                {
+                    return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account has been deactivated. Please contact support.");
+                }
+
+                // Step 3: Check approval status for BusinessOwner
                 var existingRoles = (await _userManager.GetRolesAsync(existingUser)).ToArray();
+                if (existingRoles.Contains(UserRoleEnum.BusinessOwner.ToString()) && !existingUser.IsApproved)
+                {
+                    return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account is pending admin approval. Please wait for approval before logging in.");
+                }
+
+                // User exists and is valid, generate tokens and return
                 var (existingJwtToken, existingExpiresAtUtc) = _authTokenProcessor.GenerateJwtToken(existingUser, existingRoles);
                 var existingRefreshToken = _authTokenProcessor.GenerateRefreshToken();
                 var existingRefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
@@ -159,16 +195,34 @@ namespace MSP.Application.Services.Implementations.Auth
             }
 
             // Check if user exists by email but not Google ID (merge accounts)
-            var userByEmail = await _userManager.FindByEmailAsync(googleLoginRequest.Email);
+            var userByEmail = await _userManager.FindByEmailAsync(email);
             if (userByEmail != null)
             {
+                // Check if account is active before merging
+                if (!userByEmail.IsActive)
+                {
+                    return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account has been deactivated. Please contact support.");
+                }
+
+                // Check if email is confirmed (security measure)
+                if (!userByEmail.EmailConfirmed)
+                {
+                    return ApiResponse<LoginResponse>.ErrorResponse(null, "Please verify your email before linking Google account.");
+                }
+
+                // Check approval status for BusinessOwner
+                var emailRoles = (await _userManager.GetRolesAsync(userByEmail)).ToArray();
+                if (emailRoles.Contains(UserRoleEnum.BusinessOwner.ToString()) && !userByEmail.IsApproved)
+                {
+                    return ApiResponse<LoginResponse>.ErrorResponse(null, "Your account is pending admin approval.");
+                }
+
                 // Link Google account to existing user
-                userByEmail.GoogleId = googleLoginRequest.GoogleId;
+                userByEmail.GoogleId = googleId;
                 userByEmail.Provider = "Google";
-                userByEmail.AvatarUrl = googleLoginRequest.AvatarUrl;
+                userByEmail.AvatarUrl = avatarUrl;
                 await _userManager.UpdateAsync(userByEmail);
 
-                var emailRoles = (await _userManager.GetRolesAsync(userByEmail)).ToArray();
                 var (emailJwtToken, emailExpiresAtUtc) = _authTokenProcessor.GenerateJwtToken(userByEmail, emailRoles);
                 var emailRefreshToken = _authTokenProcessor.GenerateRefreshToken();
                 var emailRefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
@@ -188,20 +242,20 @@ namespace MSP.Application.Services.Implementations.Auth
             }
 
             // User doesn't exist - Auto register as Member
-            var fullName = $"{googleLoginRequest.FirstName} {googleLoginRequest.LastName}".Trim();
+            var fullName = $"{firstName} {lastName}".Trim();
             if (string.IsNullOrWhiteSpace(fullName))
             {
-                fullName = googleLoginRequest.Email.Split('@')[0]; // Fallback to email prefix
+                fullName = email.Split('@')[0]; // Fallback to email prefix
             }
 
             var newUser = new User
             {
-                Email = googleLoginRequest.Email,
-                UserName = googleLoginRequest.Email,
+                Email = email,
+                UserName = email,
                 FullName = fullName,
-                GoogleId = googleLoginRequest.GoogleId,
+                GoogleId = googleId,
                 Provider = "Google",
-                AvatarUrl = googleLoginRequest.AvatarUrl,
+                AvatarUrl = avatarUrl,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 EmailConfirmed = true, // Google accounts are pre-verified
                 CreatedAt = DateTime.UtcNow,
