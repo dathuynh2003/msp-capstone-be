@@ -55,13 +55,7 @@ namespace MSP.Infrastructure.Extensions
         public static IServiceCollection AddSignalRNotificationService<THub>(this IServiceCollection services)
             where THub : Hub
         {
-            services.AddScoped<ISignalRNotificationService>(provider =>
-            {
-                var hubContext = provider.GetRequiredService<IHubContext<THub>>();
-                var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SignalRNotificationService>>();
-                return new SignalRNotificationService(hubContext, logger);
-            });
-
+            services.AddScoped<ISignalRNotificationService, SignalRNotificationService<THub>>();
             return services;
         }
     }

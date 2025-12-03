@@ -8,15 +8,16 @@ namespace MSP.Infrastructure.Services
     /// <summary>
     /// Implementation of SignalR notification service
     /// Handles real-time notification broadcasting
+    /// Uses generic Hub type to avoid circular dependency
     /// </summary>
-    public class SignalRNotificationService : ISignalRNotificationService
+    public class SignalRNotificationService<THub> : ISignalRNotificationService where THub : Hub
     {
-        private readonly dynamic _hubContext;
-        private readonly ILogger<SignalRNotificationService> _logger;
+        private readonly IHubContext<THub> _hubContext;
+        private readonly ILogger<SignalRNotificationService<THub>> _logger;
 
         public SignalRNotificationService(
-            object hubContext,
-            ILogger<SignalRNotificationService> logger)
+            IHubContext<THub> hubContext,
+            ILogger<SignalRNotificationService<THub>> logger)
         {
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
             _logger = logger;
