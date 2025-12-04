@@ -1,15 +1,16 @@
-using Xunit;
-using Moq;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Moq;
 using MSP.Application.Abstracts;
 using MSP.Application.Models.Requests.Auth;
 using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Services.Implementations.Auth;
+using MSP.Application.Services.Interfaces.Auth;
 using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Domain.Entities;
 using MSP.Shared.Enums;
-using Microsoft.Extensions.Configuration;
-using MSP.Application.Services.Interfaces.Auth;
+using Xunit;
 
 namespace MSP.Tests.Services.AccountServicesTest
 {
@@ -21,6 +22,8 @@ namespace MSP.Tests.Services.AccountServicesTest
         private readonly Mock<INotificationService> _mockNotificationService;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IGoogleTokenValidator> _mockGoogleTokenValidator;
+        private Mock<IOrganizationInvitationService> _mockOrganizationInvitationService;
+
         private readonly IAccountService _accountService;
 
         public LoginTest()
@@ -34,6 +37,7 @@ namespace MSP.Tests.Services.AccountServicesTest
             _mockNotificationService = new Mock<INotificationService>();
             _mockConfiguration = new Mock<IConfiguration>();
             _mockGoogleTokenValidator = new Mock<IGoogleTokenValidator>();
+            _mockOrganizationInvitationService = new Mock<IOrganizationInvitationService>();
 
             _accountService = new AccountService(
                 _mockAuthTokenProcessor.Object,
@@ -41,7 +45,8 @@ namespace MSP.Tests.Services.AccountServicesTest
                 _mockUserRepository.Object,
                 _mockNotificationService.Object,
                 _mockConfiguration.Object,
-                _mockGoogleTokenValidator.Object
+                _mockGoogleTokenValidator.Object,
+                _mockOrganizationInvitationService.Object
             );
         }
 
