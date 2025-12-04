@@ -152,5 +152,15 @@ namespace MSP.Infrastructure.Repositories
                 .Include(x => x.BusinessOwner)
                 .FirstOrDefaultAsync(x => x.Token == token);
         }
+
+        public async Task<IEnumerable<OrganizationInvitation>> GetPendingExternalInvitationsByEmailAsync(string email)
+        {
+            return await _context.OrganizationInvitations
+                .Include(x => x.BusinessOwner)
+                .Where(x => x.InvitedEmail != null
+                         && x.InvitedEmail.ToLower() == email.ToLower()
+                         && x.Status == InvitationStatus.Pending)
+                .ToListAsync();
+        }
     }
 }

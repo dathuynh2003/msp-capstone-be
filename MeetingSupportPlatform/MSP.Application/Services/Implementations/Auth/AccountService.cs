@@ -8,6 +8,7 @@ using MSP.Application.Models.Requests.Notification;
 using MSP.Application.Models.Responses.Auth;
 using MSP.Application.Services.Interfaces.Auth;
 using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Interfaces.OrganizationInvitation;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 using MSP.Shared.Enums;
@@ -23,14 +24,15 @@ namespace MSP.Application.Services.Implementations.Auth
         private readonly INotificationService _notificationService;
         private readonly IConfiguration _configuration;
         private readonly IGoogleTokenValidator _googleTokenValidator;
-
+        private readonly IOrganizationInvitationService _organizationInvitiationService;
         public AccountService(
             IAuthTokenProcessor authTokenProcessor, 
             UserManager<User> userManager, 
             IUserRepository userRepository, 
             INotificationService notificationService, 
             IConfiguration configuration,
-            IGoogleTokenValidator googleTokenValidator)
+            IGoogleTokenValidator googleTokenValidator,
+            IOrganizationInvitationService organizationInvitationService)
         {
             _authTokenProcessor = authTokenProcessor;
             _userManager = userManager;
@@ -38,6 +40,7 @@ namespace MSP.Application.Services.Implementations.Auth
             _notificationService = notificationService;
             _configuration = configuration;
             _googleTokenValidator = googleTokenValidator;
+            _organizationInvitiationService = organizationInvitationService;
         }
         public async Task<ApiResponse<string>> RegisterAsync(RegisterRequest registerRequest)
         {
@@ -88,6 +91,10 @@ namespace MSP.Application.Services.Implementations.Auth
             // Send confirmation email via Hangfire
             var clientUrl = _configuration["AppSettings:ClientUrl"];
             var confirmationUrl = $"{clientUrl}/confirm-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(confirmationToken)}";
+            if (!string.IsNullOrEmpty(registerRequest.InviteToken))
+            {
+                confirmationUrl += $"&inviteToken={Uri.EscapeDataString(registerRequest.InviteToken)}";
+            }
             var emailBody = EmailNotificationTemplate.ConfirmMailNotification(user.FullName, confirmationUrl);
 
             _notificationService.SendEmailNotification(
@@ -353,7 +360,7 @@ namespace MSP.Application.Services.Implementations.Auth
             return ApiResponse<RefreshTokenResponse>.SuccessResponse(rs, "Refresh Token successful.");
         }
 
-        public async Task<ApiResponse<string>> ConfirmEmailAsync(ConfirmEmailRequest confirmEmailRequest)
+        public async Task<ApiResponse<string>> ConfirmEmailAsync(ConfirmEmailRequest confirmEmailRequest, string? inviteToken)
         {
             var user = await _userManager.FindByEmailAsync(confirmEmailRequest.Email);
             if (user == null)
@@ -381,6 +388,26 @@ namespace MSP.Application.Services.Implementations.Auth
                 Type = MSP.Shared.Enums.NotificationTypeEnum.InApp.ToString(),
                 Data = $"{{\"eventType\":\"EmailConfirmed\",\"userId\":\"{user.Id}\"}}"
             });
+
+            // === HANDLE INVITATION ACCEPTANCE ===
+
+            if (!string.IsNullOrEmpty(inviteToken))
+            {
+                var inviteResult = await _organizationInvitiationService.ProcessInvitationAcceptanceAsync(user, inviteToken);
+                if (inviteResult.Success)
+                {
+                    return ApiResponse<string>.SuccessResponse(
+                        $"Email confirmed successfully!",
+                        "Email confirmed and invitation accepted.");
+                }
+                else
+                {
+                    // Email confirmed nhưng invitation failed - vẫn return success cho email
+                    return ApiResponse<string>.SuccessResponse(
+                        $"Email confirmed successfully! However, invitation processing failed: {inviteResult.Message}",
+                        "Email confirmed but invitation failed.");
+                }
+            }
 
             return ApiResponse<string>.SuccessResponse("Email confirmed successfully!", "Email has been confirmed successfully.");
         }

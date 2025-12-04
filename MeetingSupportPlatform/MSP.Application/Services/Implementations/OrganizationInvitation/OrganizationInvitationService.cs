@@ -268,6 +268,9 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
         {
             try
             {
+                var member = await _userManager.FindByIdAsync(memberId.ToString());
+                if (member == null)
+                    return ApiResponse<IEnumerable<OrganizationInvitationResponse>>.ErrorResponse(null, "Invalid Member! Cannot fetch invitaions");
                 var invitations = await _organizationInviteRepository.GetReceivedInvitationsByMemberIdAsync(memberId);
 
                 var response = invitations.Select(x => new OrganizationInvitationResponse
@@ -422,10 +425,18 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 // 7. Cancel tất cả invitations/requests pending khác của member
                 var pendingInvitations = await _organizationInviteRepository.GetAllPendingInvitationsByMemberIdAsync(memberId);
                 var otherPendingInvitations = pendingInvitations.Where(x => x.Id != invitationId).ToList();
+                var pendingExternalInvitations = await _organizationInviteRepository.GetPendingExternalInvitationsByEmailAsync(member.Email!);
+                var otherExternalInvitations = pendingExternalInvitations
+                    .Where(x => x.Id != invitationId)
+                    .ToList();
 
-                if (otherPendingInvitations.Any())
+                var allOtherInvitations = otherPendingInvitations
+                    .Union(otherExternalInvitations)
+                    .DistinctBy(x => x.Id)
+                    .ToList();
+                if (allOtherInvitations.Any())
                 {
-                    foreach (var inv in otherPendingInvitations)
+                    foreach (var inv in allOtherInvitations)
                     {
                         inv.Status = InvitationStatus.Canceled;
                         inv.RespondedAt = DateTime.UtcNow;
@@ -593,7 +604,56 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             }
         }
 
+        public async Task<ApiResponse<string>> ProcessInvitationAcceptanceAsync(User user, string token)
+        {
+            try
+            {
+                // 1. Tìm invitation bằng token
+                var invitation = await _organizationInviteRepository.GetByTokenAsync(token);
 
+                if (invitation == null)
+                {
+                    return ApiResponse<string>.ErrorResponse(null, "Invitation not found or invalid.");
+                }
+
+                // 2. Validate invitation status
+                if (invitation.Status != InvitationStatus.Pending)
+                {
+                    return ApiResponse<string>.ErrorResponse(null, $"This invitation is already {invitation.Status}.");
+                }
+
+                // 3. Validate email match
+                if (!string.Equals(invitation.InvitedEmail, user.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ApiResponse<string>.ErrorResponse(null, "This invitation was sent to a different email address.");
+                }
+
+                // 4. Check if user already in an organization
+                if (!string.IsNullOrEmpty(user.Organization))
+                {
+                    return ApiResponse<string>.ErrorResponse(null, "You are already part of an organization.");
+                }
+
+                // 5. Get business owner
+                var businessOwner = await _userManager.FindByIdAsync(invitation.BusinessOwnerId.ToString());
+                if (businessOwner == null)
+                {
+                    return ApiResponse<string>.ErrorResponse(null, "Organization owner not found.");
+                }
+
+                // 6. Update MemberId trước (vì external invitation có MemberId = null)
+                invitation.MemberId = user.Id;
+                await _organizationInviteRepository.UpdateAsync(invitation);
+
+                // 7. Gọi MemberAcceptInvitationAsync để xử lý phần còn lại
+                return await MemberAcceptInvitationAsync(user.Id, invitation.Id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing invitation: {ex.Message}");
+                return ApiResponse<string>.ErrorResponse(null, "Failed to process invitation.");
+            }
+        }
         public async Task<ApiResponse<bool>> RequestJoinOrganizeAsync(Guid memberId, Guid businessOwnerId)
         {
             // Validate member exists
@@ -843,31 +903,75 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
 
         private async Task SendExternalInvitationEmailAsync(User businessOwner, string email, string token)
         {
-            //var invitationLink = $"{_configuration["AppSettings:ClientUrl"];}/invite/accept?token={token}";
             var clientUrl = _configuration["AppSettings:ClientUrl"];
-            var invitationLink = $"{clientUrl}/invite/accept?token={token}";
+
+            // Link đăng ký với email đã điền sẵn
+            var signUpLink = $"{clientUrl}/sign-up?email={email}&invitation={token}";
+            var businessPageLink = $"{clientUrl}/business";
 
             var body = $@"
-        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
-            <h2 style='color: #FF5E13;'>You've been invited!</h2>
-            <p><strong>{businessOwner.FullName}</strong> has invited you to join the organization 
-               <strong>{businessOwner.Organization}</strong>.</p>
-            <p>Click the button below to accept and create your account:</p>
-            <p style='margin: 24px 0;'>
-                <a href='{invitationLink}' 
-                   style='background-color: #FF5E13; color: white; padding: 14px 28px; 
-                          text-decoration: none; border-radius: 8px; display: inline-block;
-                          font-weight: bold;'>
-                    Accept Invitation
-                </a>
-            </p>
-            <p style='color: #666; font-size: 14px;'>This invitation will expire in 7 days.</p>
-            <p style='color: #999; font-size: 12px;'>
-                If you didn't expect this invitation, you can safely ignore this email.
-            </p>
-        </div>";
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+                    <div style='text-align: center; margin-bottom: 30px;'>
+                        <h2 style='color: #FF5E13; margin: 0;'>You've Been Invited! 🎉</h2>
+                    </div>
+        
+                    <p style='font-size: 16px; color: #333;'>Hello,</p>
+        
+                    <p style='font-size: 16px; color: #333;'>
+                        <strong>{businessOwner.FullName}</strong> has invited you to join the organization 
+                        <strong style='color: #FF5E13;'>{businessOwner.Organization}</strong>.
+                    </p>
 
-            _notificationService.SendEmailNotification(email, $"Invitation to join {businessOwner.Organization}", body);
+                    <div style='background: #FDF0D2; border-radius: 12px; padding: 24px; margin: 24px 0;'>
+                        <h3 style='color: #FF5E13; margin-top: 0;'>How to Accept This Invitation</h3>
+            
+                        <div style='margin-bottom: 16px;'>
+                            <p style='font-weight: bold; color: #333; margin-bottom: 8px;'>Step 1: Create Your Account</p>
+                            <p style='color: #666; margin: 0 0 12px 0;'>Click the button below to go to the registration page. Your email will be pre-filled automatically.</p>
+                            <a href='{signUpLink}' 
+                               style='background-color: #FF5E13; color: white; padding: 12px 24px; 
+                                      text-decoration: none; border-radius: 8px; display: inline-block;
+                                      font-weight: bold; font-size: 14px;'>
+                                Create Account
+                            </a>
+                        </div>
+
+                        <div style='margin-bottom: 16px;'>
+                            <p style='font-weight: bold; color: #333; margin-bottom: 8px;'>Step 2: Complete Registration</p>
+                            <p style='color: #666; margin: 0;'>Fill in the remaining fields (Full Name, Phone Number, Password) and submit the form.</p>
+                        </div>
+
+                        <div style='margin-bottom: 16px;'>
+                            <p style='font-weight: bold; color: #333; margin-bottom: 8px;'>Step 3: Sign In</p>
+                            <p style='color: #666; margin: 0;'>After registration, sign in to your new account.</p>
+                        </div>
+
+                        <div>
+                            <p style='font-weight: bold; color: #333; margin-bottom: 8px;'>Step 4: Accept the Invitation</p>
+                            <p style='color: #666; margin: 0;'>
+                                Go to <a href='{businessPageLink}' style='color: #FF5E13;'>Business Page</a> 
+                                to view and accept the organization invitation.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style='background: #f5f5f5; border-radius: 8px; padding: 16px; margin-top: 24px;'>
+                        <p style='color: #666; font-size: 14px; margin: 0;'>
+                            <strong>Your invited email:</strong> {email}
+                        </p>
+                    </div>
+
+                    <p style='color: #999; font-size: 12px; margin-top: 24px;'>
+                        If you didn't expect this invitation, you can safely ignore this email.
+                    </p>
+                </div>";
+
+            _notificationService.SendEmailNotification(
+                email,
+                $"🎉 Invitation to join {businessOwner.Organization}",
+                body
+            );
         }
+
     }
 }

@@ -55,7 +55,7 @@ namespace MSP.WebAPI.Controllers
         }
 
         [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token, [FromQuery] string? inviteToken)
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
             {
@@ -68,7 +68,7 @@ namespace MSP.WebAPI.Controllers
                 Token = token
             };
 
-            var result = await _accountService.ConfirmEmailAsync(confirmEmailRequest);
+            var result = await _accountService.ConfirmEmailAsync(confirmEmailRequest, inviteToken);
             return Ok(result);
         }
 

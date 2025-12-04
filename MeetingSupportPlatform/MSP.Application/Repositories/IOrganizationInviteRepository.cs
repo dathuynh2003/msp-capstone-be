@@ -18,6 +18,7 @@ namespace MSP.Application.Repositories
         Task<OrganizationInvitation?> GetByIdAsync(Guid id);
         Task UpdateAsync(OrganizationInvitation invitation);
         Task<IEnumerable<OrganizationInvitation>> GetAllPendingInvitationsByMemberIdAsync(Guid memberId);
+        Task<IEnumerable<OrganizationInvitation>> GetPendingExternalInvitationsByEmailAsync(string email);
         Task UpdateRangeAsync(IEnumerable<OrganizationInvitation> invitations);
         /// <summary>
         /// Lấy pending invitations đã quá expiry date

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using MSP.Application.Models.Responses.OrganizationInvitation;
+using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
 namespace MSP.Application.Services.Interfaces.OrganizationInvitation
@@ -40,6 +41,7 @@ namespace MSP.Application.Services.Interfaces.OrganizationInvitation
 
         // BO reject join request từ Member
         Task<ApiResponse<string>> BusinessOwnerRejectRequestAsync(Guid businessOwnerId, Guid invitationId);
+        Task<ApiResponse<string>> ProcessInvitationAcceptanceAsync(User user, string token);
 
     }
 }

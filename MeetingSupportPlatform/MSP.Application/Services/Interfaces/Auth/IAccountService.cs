@@ -10,7 +10,7 @@ namespace MSP.Application.Services.Interfaces.Auth
         Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest loginRequest);
         Task<ApiResponse<LoginResponse>> GoogleLoginAsync(GoogleLoginRequest googleLoginRequest);
         Task<ApiResponse<RefreshTokenResponse>> RefreshTokenAsync(string? refreshToken);
-        Task<ApiResponse<string>> ConfirmEmailAsync(ConfirmEmailRequest confirmEmailRequest);
+        Task<ApiResponse<string>> ConfirmEmailAsync(ConfirmEmailRequest confirmEmailRequest, string? inviteToken);
         Task<ApiResponse<string>> ResendConfirmationEmailAsync(ResendConfirmationEmailRequest resendRequest);
         Task<ApiResponse<string>> LogoutAsync(string? userId = null);
 
