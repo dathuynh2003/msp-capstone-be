@@ -9,6 +9,7 @@ COPY ["MSP.Application/MSP.Application.csproj", "MSP.Application/"]
 COPY ["MSP.Infrastructure/MSP.Infrastructure.csproj", "MSP.Infrastructure/"]
 COPY ["MSP.Domain/MSP.Domain.csproj", "MSP.Domain/"]
 COPY ["MSP.Shared/MSP.Shared.csproj", "MSP.Shared/"]
+COPY ["MSP.Tests/MSP.Tests.csproj", "MSP.Tests/"]
 
 # Restore dependencies
 RUN dotnet restore "MeetingSupportPlatform.sln"
