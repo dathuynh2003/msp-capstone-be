@@ -73,7 +73,7 @@ namespace MSP.Infrastructure.Repositories
                     !m.IsDeleted &&
                     m.Status == ongoingStatus &&
                     !m.EndTime.HasValue &&
-                    m.StartTime.AddHours(1) <= currentTime)
+                    m.StartTime.AddMinutes(30) <= currentTime)
                 .ToListAsync();
         }
 
