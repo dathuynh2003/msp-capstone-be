@@ -577,9 +577,9 @@ namespace MSP.Application.Services.Implementations.Project
                                 {
                                     UserId = task.UserId.Value,
                                     Title = request.Status == ProjectStatusEnum.Completed.ToString()
-                                        ? "Công việc bị hủy do dự án hoàn thành"
-                                        : "Công việc bị hủy do dự án bị hủy",
-                                    Message = $"Công việc '{task.Title}' đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
+                                        ? "Task Cancelled Due to Project Completion"
+                                        : "Task Cancelled Due to Project Cancellation",
+                                    Message = $"Task '{task.Title}' has been cancelled because the project '{project.Name}' has been {(request.Status == ProjectStatusEnum.Completed.ToString() ? "completed" : "cancelled")}.",
                                     Type = NotificationTypeEnum.TaskUpdate.ToString(),
                                     EntityId = task.Id.ToString(),
                                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -605,9 +605,9 @@ namespace MSP.Application.Services.Implementations.Project
                                 {
                                     UserId = task.ReviewerId.Value,
                                     Title = request.Status == ProjectStatusEnum.Completed.ToString()
-                                        ? "Công việc review bị hủy do dự án hoàn thành"
-                                        : "Công việc review bị hủy do dự án bị hủy",
-                                    Message = $"Công việc '{task.Title}' mà bạn đang review đã bị hủy do dự án '{project.Name}' {(request.Status == ProjectStatusEnum.Completed.ToString() ? "đã hoàn thành" : "đã bị hủy")}.",
+                                        ? "Review Cancelled Due to Project Completion"
+                                        : "Review Cancelled Due to Project Cancellation",
+                                    Message = $"The task '{task.Title}' you were reviewing has been cancelled because the project '{project.Name}' has been {(request.Status == ProjectStatusEnum.Completed.ToString() ? "completed" : "cancelled")}.",
                                     Type = NotificationTypeEnum.TaskUpdate.ToString(),
                                     EntityId = task.Id.ToString(),
                                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -650,7 +650,7 @@ namespace MSP.Application.Services.Implementations.Project
                         var ownerNotification = new CreateNotificationRequest
                         {
                             UserId = owner.Id,
-                            Title = "🎉 Project Completed",
+                            Title = "Project Completed",
                             Message = $"Project '{project.Name}' has been marked as completed. Great job!",
                             Type = NotificationTypeEnum.ProjectUpdate.ToString(),
                             EntityId = project.Id.ToString(),
@@ -691,7 +691,7 @@ namespace MSP.Application.Services.Implementations.Project
                                 var memberNotification = new CreateNotificationRequest
                                 {
                                     UserId = projectMember.MemberId,
-                                    Title = "🎉 Project Completed",
+                                    Title = "Project Completed",
                                     Message = $"Project '{project.Name}' has been completed. Thank you for your contribution!",
                                     Type = NotificationTypeEnum.ProjectUpdate.ToString(),
                                     EntityId = project.Id.ToString(),
@@ -712,10 +712,10 @@ namespace MSP.Application.Services.Implementations.Project
                                 {
                                     _notificationService.SendEmailNotification(
                                         member.Email!,
-                                        "Dự án hoàn thành",
-                                        $"Xin chào {member.FullName},<br/><br/>" +
-                                        $"Tin tuyệt vời! Dự án <strong>{project.Name}</strong> đã được hoàn thành thành công.<br/><br/>" +
-                                        $"Cảm ơn sự chăm chỉ và cống hiến của bạn cho dự án này. Đóng góp của bạn rất quan trọng!");
+                                        "Project Completed",
+                                        $"Hello {member.FullName},<br/><br/>" +
+                                        $"Good news! The project <strong>{project.Name}</strong> has been successfully completed.<br/><br/>" +
+                                        $"Thank you for your hard work and dedication. Your contributions were invaluable!");
                                 }
                             }
                             catch (Exception ex)
@@ -746,7 +746,7 @@ namespace MSP.Application.Services.Implementations.Project
                         var ownerNotification = new CreateNotificationRequest
                         {
                             UserId = owner.Id,
-                            Title = "⚠️ Project Cancelled",
+                            Title = "Project Cancelled",
                             Message = $"Project '{project.Name}' has been marked as cancelled.",
                             Type = NotificationTypeEnum.ProjectUpdate.ToString(),
                             EntityId = project.Id.ToString(),
@@ -787,7 +787,7 @@ namespace MSP.Application.Services.Implementations.Project
                                 var memberNotification = new CreateNotificationRequest
                                 {
                                     UserId = projectMember.MemberId,
-                                    Title = "⚠️ Project Cancelled",
+                                    Title = "Project Cancelled",
                                     Message = $"Project '{project.Name}' has been cancelled. All incomplete tasks have been automatically cancelled.",
                                     Type = NotificationTypeEnum.ProjectUpdate.ToString(),
                                     EntityId = project.Id.ToString(),
@@ -808,10 +808,10 @@ namespace MSP.Application.Services.Implementations.Project
                                 {
                                     _notificationService.SendEmailNotification(
                                         member.Email!,
-                                        "Dự án đã bị hủy",
-                                        $"Xin chào {member.FullName},<br/><br/>" +
-                                        $"Dự án <strong>{project.Name}</strong> đã được đánh dấu là hủy bỏ.<br/><br/>" +
-                                        $"Tất cả công việc chưa hoàn thành của bạn trong dự án này đã được tự động hủy.");
+                                        "Project Cancelled",
+                                        $"Hello {member.FullName},<br/><br/>" +
+                                        $"The project <strong>{project.Name}</strong> has been cancelled.<br/><br/>" +
+                                        $"All your incomplete tasks in this project have been automatically cancelled.");
                                 }
                             }
                             catch (Exception ex)

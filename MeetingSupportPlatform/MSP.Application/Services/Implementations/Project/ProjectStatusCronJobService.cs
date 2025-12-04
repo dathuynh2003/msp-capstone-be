@@ -91,8 +91,8 @@ namespace MSP.Application.Services.Implementations.Project
                     {
                         var daysRemaining = (project.EndDate!.Value - now).Days;
                         var deadlineText = daysRemaining == 0 
-                            ? "hôm nay" 
-                            : $"trong {daysRemaining} ngày n?a";
+                            ? "today"
+                            : $"in {daysRemaining} days";
 
                         _logger.LogWarning(
                             "Project {ProjectId} ('{Name}') is nearing deadline. EndDate: {EndDate} ({DeadlineText})",
@@ -135,7 +135,7 @@ namespace MSP.Application.Services.Implementations.Project
                                 await _notificationService.CreateInAppNotificationAsync(new CreateNotificationRequest
                                 {
                                     UserId = pmUserId,
-                                    Title = "⚠️ Project Deadline Warning",
+                                    Title = "Project Deadline Warning",
                                     Message = $"Project '{project.Name}' is due {deadlineText} (End date: {project.EndDate:dd/MM/yyyy}). Please review project progress.",
                                     Type = NotificationTypeEnum.InApp.ToString(),
                                     Data = $"{{\"eventType\":\"ProjectDeadlineWarning\",\"projectId\":\"{project.Id}\",\"projectName\":\"{project.Name}\",\"endDate\":\"{project.EndDate:dd/MM/yyyy}\",\"daysRemaining\":{daysRemaining}}}"

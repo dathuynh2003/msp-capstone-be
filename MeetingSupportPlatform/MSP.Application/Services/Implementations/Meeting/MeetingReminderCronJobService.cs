@@ -97,7 +97,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                                     var notificationRequest = new CreateNotificationRequest
                                     {
                                         UserId = attendee.Id,
-                                        Title = "🔔 Meeting Reminder",
+                                        Title = "Meeting Reminder",
                                         Message = $"Meeting '{meeting.Title}' will start in approximately {minutesUntilStart} minutes at {meeting.StartTime:HH:mm}.",
                                         Type = NotificationTypeEnum.MeetingReminder.ToString(),
                                         EntityId = meeting.Id.ToString(),
