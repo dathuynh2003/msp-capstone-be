@@ -200,9 +200,9 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             {
                 int used = l.LimitationType switch
                 {
-                    nameof(LimitationTypeEnum.NumberProject) => await _projectRepository.CountProjectsAsync(userId, subscription.StartDate, subscription.EndDate),
-                    nameof(LimitationTypeEnum.NumberMeeting) => await _meetingRepository.CountMeetingsAsync(userId, subscription.StartDate, subscription.EndDate),
-                    nameof(LimitationTypeEnum.NumberMemberInOrganization) => await _organizationInviteRepository.CountMembersInOrganizationAsync(userId, subscription.StartDate, subscription.EndDate),
+                    nameof(LimitationTypeEnum.NumberProject) => await _projectRepository.CountProjectsAsync(userId),
+                    nameof(LimitationTypeEnum.NumberMeeting) => await _meetingRepository.CountMeetingsAsync(userId),
+                    nameof(LimitationTypeEnum.NumberMemberInOrganization) => await _organizationInviteRepository.CountMembersInOrganizationAsync(userId),
                     _ => 0
                 };
 

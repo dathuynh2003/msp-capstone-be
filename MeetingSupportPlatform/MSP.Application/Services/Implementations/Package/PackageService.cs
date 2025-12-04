@@ -5,6 +5,8 @@ using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Package;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
+using MSP.Shared.Enums;
+using System.Linq;
 
 namespace MSP.Application.Services.Implementations.Package
 {
@@ -26,6 +28,14 @@ namespace MSP.Application.Services.Implementations.Package
             try
             {
                 var packages = await _packageRepository.GetAll();
+                var orderMap = new Dictionary<LimitationTypeEnum, int>
+                {
+                    { LimitationTypeEnum.NumberMemberInOrganization, 1 },
+                    { LimitationTypeEnum.NumberProject, 2 },
+                    { LimitationTypeEnum.NumberMemberInProject, 3 },
+                    { LimitationTypeEnum.NumberMeeting, 4 },
+                    { LimitationTypeEnum.NumberMemberInMeeting, 5 }
+                };
 
                 var response = packages.Select(p => new GetPackageResponse
                 {
@@ -36,16 +46,23 @@ namespace MSP.Application.Services.Implementations.Package
                     Currency = p.Currency,
                     BillingCycle = p.BillingCycle,
                     isDeleted = p.IsDeleted,
-                    Limitations = p.Limitations.Select(l => new GetLimitationResponse
-                    {
-                        Id = l.Id,
-                        Name = l.Name,
-                        Description = l.Description,
-                        IsUnlimited = l.IsUnlimited,
-                        LimitValue = l.LimitValue,
-                        LimitUnit = l.LimitUnit,
-                        IsDeleted = l.IsDeleted
-                    }).ToList()
+                    Limitations = p.Limitations
+                         .OrderBy(l =>
+                         {
+                             Enum.TryParse<LimitationTypeEnum>(l.LimitationType, out var enumValue);
+                             return orderMap[enumValue];
+                         })
+                        .Select(l => new GetLimitationResponse
+                        {
+                            Id = l.Id,
+                            Name = l.Name,
+                            Description = l.Description,
+                            IsUnlimited = l.IsUnlimited,
+                            LimitValue = l.LimitValue,
+                            LimitUnit = l.LimitUnit,
+                            IsDeleted = l.IsDeleted
+                        })
+                        .ToList()
                 }).ToList();
 
                 return ApiResponse<List<GetPackageResponse>>.SuccessResponse(response);
@@ -63,6 +80,14 @@ namespace MSP.Application.Services.Implementations.Package
             if (package == null || package.IsDeleted)
                 return ApiResponse<GetPackageResponse>.ErrorResponse(null, "Package not found");
 
+            var orderMap = new Dictionary<LimitationTypeEnum, int>
+            {
+                { LimitationTypeEnum.NumberMemberInOrganization, 1 },
+                { LimitationTypeEnum.NumberProject, 2 },
+                { LimitationTypeEnum.NumberMemberInProject, 3 },
+                { LimitationTypeEnum.NumberMeeting, 4 },
+                { LimitationTypeEnum.NumberMemberInMeeting, 5 }
+            };
             var response = new GetPackageResponse
             {
                 Id = package.Id,
@@ -72,16 +97,24 @@ namespace MSP.Application.Services.Implementations.Package
                 Currency = package.Currency,
                 BillingCycle = package.BillingCycle,
                 isDeleted = package.IsDeleted,
-                Limitations = package.Limitations.Select(l => new GetLimitationResponse
-                {
-                    Id = l.Id,
-                    Name = l.Name,
-                    Description = l.Description,
-                    IsUnlimited = l.IsUnlimited,
-                    LimitValue = l.LimitValue,
-                    LimitUnit = l.LimitUnit,
-                    IsDeleted = l.IsDeleted
-                }).ToList()
+                Limitations = package.Limitations
+                        .OrderBy(l =>
+                        {
+                            // Parse string → enum
+                            Enum.TryParse<LimitationTypeEnum>(l.LimitationType, out var enumValue);
+                            return orderMap[enumValue];
+                        })
+                        .Select(l => new GetLimitationResponse
+                        {
+                            Id = l.Id,
+                            Name = l.Name,
+                            Description = l.Description,
+                            IsUnlimited = l.IsUnlimited,
+                            LimitValue = l.LimitValue,
+                            LimitUnit = l.LimitUnit,
+                            IsDeleted = l.IsDeleted
+                        })
+                        .ToList()
             };
 
             return ApiResponse<GetPackageResponse>.SuccessResponse(response);

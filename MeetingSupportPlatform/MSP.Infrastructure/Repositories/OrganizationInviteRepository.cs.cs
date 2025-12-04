@@ -127,14 +127,15 @@ namespace MSP.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate)
+        public Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId)
         {
             return _context.OrganizationInvitations
                 .Where(x =>
                     x.BusinessOwnerId == businessOwnerId &&
-                    x.Status == InvitationStatus.Accepted &&
-                    (!startDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date >= startDate.Value.Date)) &&
-                    (!endDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date <= endDate.Value.Date)))
+                    x.Status == InvitationStatus.Accepted
+                //&& (!startDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date >= startDate.Value.Date)) &&
+                //(!endDate.HasValue || (x.RespondedAt.HasValue && x.RespondedAt.Value.Date <= endDate.Value.Date))
+                )
                 .CountAsync();
         }
 

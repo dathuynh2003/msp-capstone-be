@@ -101,18 +101,18 @@ namespace MSP.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<int> CountProjectsAsync(Guid userId, DateTime? startDate, DateTime? endDate)
+        public async Task<int> CountProjectsAsync(Guid userId)
         {
             var query = _context.Projects.AsQueryable();
             query = query.Where(p => !p.IsDeleted && p.OwnerId == userId);
-            if (startDate.HasValue)
-            {
-                query = query.Where(p => p.CreatedAt.Date >= startDate.Value.Date);
-            }
-            if (endDate.HasValue)
-            {
-                query = query.Where(p => p.CreatedAt.Date <= endDate.Value.Date);
-            }
+            //if (startDate.HasValue)
+            //{
+            //    query = query.Where(p => p.CreatedAt.Date >= startDate.Value.Date);
+            //}
+            //if (endDate.HasValue)
+            //{
+            //    query = query.Where(p => p.CreatedAt.Date <= endDate.Value.Date);
+            //}
             return await query.CountAsync();
         }
 

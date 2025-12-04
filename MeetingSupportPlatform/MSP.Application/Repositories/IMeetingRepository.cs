@@ -18,6 +18,6 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<Meeting>> GetOngoingMeetingsToFinishAsync(DateTime currentTime, string ongoingStatus);
         Task<IEnumerable<Meeting>> GetMeetingsByUserIdAsync(Guid userId);
 
-        Task<int> CountMeetingsAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate);
+        Task<int> CountMeetingsAsync(Guid businessOwnerId);
     }
 }

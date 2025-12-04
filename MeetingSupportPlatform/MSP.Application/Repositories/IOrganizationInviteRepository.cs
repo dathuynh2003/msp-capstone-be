@@ -25,7 +25,7 @@ namespace MSP.Application.Repositories
         Task<IEnumerable<OrganizationInvitation>> GetExpiredPendingInvitationsAsync(DateTime expiryDate);
 
         //count number of members in organization in subscription period
-        Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId, DateTime? startDate, DateTime? endDate);
+        Task<int> CountMembersInOrganizationAsync(Guid businessOwnerId);
 
         Task<bool> IsExternalInvitationExistsAsync(Guid businessOwnerId, string email);
         Task<OrganizationInvitation?> GetByTokenAsync(string token);
