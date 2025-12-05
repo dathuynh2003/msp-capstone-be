@@ -127,8 +127,11 @@ app.UseHangfireDashboard();
 // Configure Hangfire Recurring Jobs
 app.UseHangfireJobs();
 
-// Map SignalR Hub (Authorization handled in Hub class)
+// Map SignalR Hub at two paths:
+// 1. /notificationHub - for localhost/backward compatibility
+// 2. /api/v1/notificationHub - for production (matches API routing)
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/api/v1/notificationHub");
 
 app.MapControllers();
 app.Run();
