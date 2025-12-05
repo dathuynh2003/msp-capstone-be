@@ -127,9 +127,8 @@ app.UseHangfireDashboard();
 // Configure Hangfire Recurring Jobs
 app.UseHangfireJobs();
 
-// Map SignalR Hub
-app.MapHub<NotificationHub>("/notificationHub")
-   .RequireAuthorization();
+// Map SignalR Hub (Authorization handled in Hub class)
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.MapControllers();
 app.Run();
