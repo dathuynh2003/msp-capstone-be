@@ -116,6 +116,20 @@ namespace MSP.WebAPI.Controllers
             var result = await _userService.UpdateUserProfileAsync(userId, request);
             return Ok(result);
         }
+        [HttpPost("check-old-password/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> CheckOldPassword([FromRoute] Guid userId, [FromBody] CheckOldPasswordRequest request)
+        {
+            var result = await _userService.CheckOldPassword(userId, request);
+            return Ok(result);
 
+        }
+        [HttpPost("change-password/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromRoute] Guid userId, [FromBody] ChangePasswordRequest request)
+        {
+            var result = await _userService.ChangePassword(userId, request);
+            return Ok(result);
+        }
     }
 }

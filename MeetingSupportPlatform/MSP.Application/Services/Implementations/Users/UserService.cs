@@ -475,6 +475,42 @@ namespace MSP.Application.Services.Implementations.Users
             }
             return ApiResponse<string>.SuccessResponse(null, "User profile has been updated successfully.");
         }
+
+        public async Task<ApiResponse<string>> CheckOldPassword(Guid userId, CheckOldPasswordRequest request)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
+            }
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.OldPassword);
+            if (!isPasswordValid)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "Old password is incorrect.");
+            }
+            return ApiResponse<string>.SuccessResponse(null, "Old password is correct.");
+        }
+
+        public async Task<ApiResponse<string>> ChangePassword(Guid userId, ChangePasswordRequest request)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "User not found.");
+            }    
+            var isOldPasswordValid = await _userManager.CheckPasswordAsync(user, request.OldPassword);
+            if (!isOldPasswordValid)
+            {
+                return ApiResponse<string>.ErrorResponse(null, "Old password is incorrect.");
+            }
+            var result = await _userManager.ChangePasswordAsync(user, request.OldPassword, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                return ApiResponse<string>.ErrorResponse(null, $"Failed to change password: {errors}");
+            }
+            return ApiResponse<string>.SuccessResponse(null, "Password has been changed successfully.");
+        }
     }
 }
 

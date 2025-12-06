@@ -21,7 +21,8 @@ namespace MSP.Application.Services.Interfaces.Users
         Task<ApiResponse<string>> RemoveMemberFromOrganizationAsync(Guid businessOwnerId, Guid memberId);
 
         Task<ApiResponse<string>> UpdateUserProfileAsync(Guid userId, UpdateUserProfileRequest request);
-
+        Task<ApiResponse<string>> CheckOldPassword(Guid userId, CheckOldPasswordRequest request);
+        Task<ApiResponse<string>> ChangePassword(Guid userId, ChangePasswordRequest request);
     }
 }
 
