@@ -203,7 +203,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
         public async Task<ApiResponse<string>> DeleteTaskAsync(Guid taskId)
         {
             var task = await _projectTaskRepository.GetTaskByIdAsync(taskId);
-            if (task == null)
+            if (task == null || task.IsDeleted)
             {
                 return ApiResponse<string>.ErrorResponse(null, "Task not found");
             }
