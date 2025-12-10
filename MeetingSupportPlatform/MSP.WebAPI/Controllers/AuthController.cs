@@ -125,5 +125,16 @@ namespace MSP.WebAPI.Controllers
             var result = await _accountService.ResetPasswordAsync(resetPasswordRequest);
             return Ok(result);
         }
+
+        [HttpGet("check-phone")]
+        public async Task<IActionResult> CheckPhoneNumber([FromQuery] string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return BadRequest("Phone number is required.");
+            }
+            var result = await _accountService.CheckPhoneNumberAsync(phoneNumber);
+            return Ok(result);
+        }
     }
 }

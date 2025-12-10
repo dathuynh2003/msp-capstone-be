@@ -16,6 +16,7 @@ namespace MSP.Application.Services.Interfaces.Auth
 
         Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequest forgotPasswordRequest);
         Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest resetPasswordRequest);
+        Task<ApiResponse<CheckPhoneNumberResponse>> CheckPhoneNumberAsync(string phoneNumber);
 
     }
 }

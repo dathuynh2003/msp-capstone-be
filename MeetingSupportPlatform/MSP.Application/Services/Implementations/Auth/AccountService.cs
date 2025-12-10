@@ -495,5 +495,34 @@ namespace MSP.Application.Services.Implementations.Auth
             }
             return ApiResponse<string>.SuccessResponse(null, "Password has been reset successfully.");
         }
+
+        public async Task<ApiResponse<CheckPhoneNumberResponse>> CheckPhoneNumberAsync(string phoneNumber)
+        {
+            try
+            {
+                // Check if phone number exists in database using UserManager
+                var users = _userManager.Users.Where(u => u.PhoneNumber == phoneNumber).ToList();
+                var isAvailable = !users.Any();
+                
+                var response = new CheckPhoneNumberResponse
+                {
+                    IsAvailable = isAvailable
+                };
+
+                return ApiResponse<CheckPhoneNumberResponse>.SuccessResponse(
+                    response, 
+                    isAvailable 
+                        ? "Phone number is available." 
+                        : "Phone number is already registered."
+                );
+            }
+            catch (Exception)
+            {
+                return ApiResponse<CheckPhoneNumberResponse>.ErrorResponse(
+                    null, 
+                    "An error occurred while checking phone number."
+                );
+            }
+        }
     }
 }
