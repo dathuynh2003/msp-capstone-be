@@ -92,7 +92,12 @@ builder.Services.AddCors(options =>
                 "https://msp-capstone-fe.vercel.app",
                 "https://msp.audivia.vn"
             )
-            .AllowAnyHeader()
+            .WithHeaders(
+                "Content-Type",
+                "Authorization",
+                "x-signalr-user-agent",  
+                "User-Agent"             
+            )
             .AllowAnyMethod()
             .AllowCredentials(); // Important for SignalR
         });
