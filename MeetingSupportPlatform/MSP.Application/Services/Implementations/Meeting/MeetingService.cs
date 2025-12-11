@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using MSP.Application.Models.Requests.Meeting;
+using MSP.Application.Models.Requests.Todo;
 using MSP.Application.Models.Responses.Meeting;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Services.Interfaces.Todos;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
@@ -12,16 +14,19 @@ namespace MSP.Application.Services.Implementations.Meeting
     {
         private readonly IMeetingRepository _meetingRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly ITodoService _todoService;
         private readonly UserManager<User> _userManager;
 
         public MeetingService(
             IMeetingRepository meetingRepository,
             IProjectRepository projectRepository,
-            UserManager<User> userManager)
+            UserManager<User> userManager,
+            ITodoService todoService)
         {
             _meetingRepository = meetingRepository;
             _projectRepository = projectRepository;
             _userManager = userManager;
+            _todoService = todoService;
         }
 
         public async Task<ApiResponse<GetMeetingResponse>> CreateMeetingAsync(CreateMeetingRequest request)
@@ -117,7 +122,7 @@ namespace MSP.Application.Services.Implementations.Meeting
             if (project == null)
                 return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Project not found");
 
- 
+
             meeting.Title = request.Title ?? meeting.Title;
             meeting.Description = request.Description ?? meeting.Description;
             meeting.MilestoneId = request.MilestoneId ?? meeting.MilestoneId;
@@ -206,7 +211,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                     Id = a.Id,
                     Email = a.Email,
                     AvatarUrl = a.AvatarUrl,
-                    FullName = a.FullName,            
+                    FullName = a.FullName,
                 }).ToList() ?? new List<AttendeeResponse>()
             };
         }
@@ -231,6 +236,51 @@ namespace MSP.Application.Services.Implementations.Meeting
             var meetings = await _meetingRepository.GetMeetingsByUserIdAsync(userId);
             var response = meetings.Select(meeting => MapToMeetingResponse(meeting)).ToList();
             return ApiResponse<List<GetMeetingResponse>>.SuccessResponse(response, "Meetings retrieved successfully");
+        }
+
+        public async Task<ApiResponse<GetMeetingResponse>> RegenerateMeetingAIDataAsync(UpdateMeetingAIDataRequest request)
+        {
+            var meeting = await _meetingRepository.GetMeetingByIdAsync(request.MeetingId);
+            if (meeting == null)
+                return ApiResponse<GetMeetingResponse>.ErrorResponse(null, "Meeting not found");
+
+            // Validate transcription and summary
+            if (string.IsNullOrWhiteSpace(request.Transcription))
+            {
+                return ApiResponse<GetMeetingResponse>.ErrorResponse(
+                    null,
+                    "Transcription is empty. Re-generate failed");
+            }
+            if (string.IsNullOrWhiteSpace(request.Summary))
+            {
+                return ApiResponse<GetMeetingResponse>.ErrorResponse(
+                    null,
+                    "Summary is empty. Re-generate failed");
+            }
+
+            // Update meeting field
+            meeting.Transcription = request.Transcription;
+            meeting.Summary = request.Summary;
+            if (!string.IsNullOrWhiteSpace(request.RecordUrl))
+            {
+                meeting.RecordUrl = request.RecordUrl;
+            }
+            meeting.UpdatedAt = DateTime.UtcNow;
+            await _meetingRepository.UpdateAsync(meeting);
+            await _meetingRepository.SaveChangesAsync();
+
+            // Soft delete all old todos
+            await _todoService.SoftDeleteTodosByMeetingId(meeting.Id);
+            //Create new todos
+            var newTodos = request.Todos ?? new List<CreateTodoRequest>();
+            foreach (var todoRequest in newTodos)
+            {
+                todoRequest.MeetingId = meeting.Id;
+                await _todoService.CreateTodoAsync(todoRequest);
+            }
+            var updatedMeeting = await _meetingRepository.GetMeetingByIdAsync(meeting.Id);
+            var response = MapToMeetingResponse(updatedMeeting);
+            return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting AI data regenerated successfully");
         }
     }
 }

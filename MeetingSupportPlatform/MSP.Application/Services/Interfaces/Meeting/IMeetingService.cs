@@ -22,7 +22,7 @@ namespace MSP.Application.Services.Interfaces.Meeting
         Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime);
         Task<ApiResponse<string>> UpdateTranscriptAsync(Guid meetingId, string transcription);
         Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByUserIdAsync(Guid userId);
-
+        Task<ApiResponse<GetMeetingResponse>> RegenerateMeetingAIDataAsync(UpdateMeetingAIDataRequest request);
 
     }
 }

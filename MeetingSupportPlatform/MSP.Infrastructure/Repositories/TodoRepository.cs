@@ -26,5 +26,23 @@ namespace MSP.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
             return todo;
         }
+
+        public async Task<bool> SoftDeleteTodosByMeetingId(Guid meetingId)
+        {
+            var todos = await _context.Todos
+                .Where(t => t.MeetingId == meetingId && t.IsDeleted != true)
+                .ToListAsync();
+            if (todos.Count == 0)
+            {
+                return false;
+            }
+            foreach (var todo in todos)
+            {
+                todo.IsDeleted = true;
+                _context.Todos.Update(todo);
+            }
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
