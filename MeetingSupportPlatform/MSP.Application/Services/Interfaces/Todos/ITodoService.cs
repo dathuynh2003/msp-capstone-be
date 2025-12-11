@@ -3,6 +3,7 @@ using MSP.Application.Models.Requests.Todo;
 using MSP.Application.Models.Responses.Meeting;
 using MSP.Application.Models.Responses.ProjectTask;
 using MSP.Application.Models.Responses.Todo;
+using MSP.Domain.Entities;
 using MSP.Shared.Common;
 using System;
 using System.Collections.Generic;
@@ -19,5 +20,6 @@ namespace MSP.Application.Services.Interfaces.Todos
         Task<ApiResponse<IEnumerable<GetTodoResponse>>> GetTodoByMeetingIdAsync(Guid meetingId);
         Task<ApiResponse<string>> DeleteTodoAsync(Guid todoId);
         Task<ApiResponse<List<GetTaskResponse>>> ConvertTodosToTasksAsync(List<Guid> todoIds);
+        Task<bool> SoftDeleteTodosByMeetingId(Guid meetingId);
     }
 }

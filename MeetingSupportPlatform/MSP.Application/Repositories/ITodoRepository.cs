@@ -12,5 +12,6 @@ namespace MSP.Application.Repositories
     {
         Task<IEnumerable<Todo>> GetTodoByMeetingId(Guid meetingId);
         Task<Todo> GetByIdAsync(Guid id);
+        Task<bool> SoftDeleteTodosByMeetingId(Guid meetingId);
     }
 }

@@ -115,5 +115,21 @@ namespace MSP.WebAPI.Controllers
             var rs = await _meetingService.GetMeetingsByUserIdAsync(userId);
             return Ok(rs);
         }
+
+        [HttpPut("{meetingId}/regenerate")]
+        public async Task<IActionResult> RegenerateMeetingAIData([FromRoute] Guid meetingId, [FromBody] UpdateMeetingAIDataRequest request)
+        {
+            request.MeetingId = meetingId;
+            var response = await _meetingService.RegenerateMeetingAIDataAsync(request);
+
+            if (!response.Success)
+            {
+                _logger.LogError("UpdateMeetingAIData failed: {Message}", response.Message);
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
     }
 }

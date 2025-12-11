@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using MSP.Application.Models.Requests.Todo;
 using MSP.Application.Models.Responses.Meeting;
 using MSP.Application.Models.Responses.ProjectTask;
@@ -23,6 +24,11 @@ namespace MSP.Application.Services.Implementations.Todos
             _todoRepository = todoRepository;
             _meetingRepository = meetingRepository;
             _projectTaskRepository = projectTaskRepository;
+        }
+
+        public async Task<bool> SoftDeleteTodosByMeetingId(Guid meetingId)
+        {
+            return await _todoRepository.SoftDeleteTodosByMeetingId(meetingId);
         }
 
         public async Task<ApiResponse<List<GetTaskResponse>>> ConvertTodosToTasksAsync(List<Guid> todoIds)
@@ -259,6 +265,5 @@ namespace MSP.Application.Services.Implementations.Todos
 
             return ApiResponse<GetTodoResponse>.SuccessResponse(rs, "Update todo successfully");
         }
-
     }
 }
