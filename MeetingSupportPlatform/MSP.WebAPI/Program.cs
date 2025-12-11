@@ -80,7 +80,7 @@ builder.Services.AddSignalR(options =>
 });
 builder.Services.AddSignalRNotificationService<NotificationHub>();
 
-// CORS
+// CORS - Configure for SignalR
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWeb",
@@ -92,14 +92,11 @@ builder.Services.AddCors(options =>
                 "https://msp-capstone-fe.vercel.app",
                 "https://msp.audivia.vn"
             )
-            .WithHeaders(
-                "Content-Type",
-                "Authorization",
-                "x-signalr-user-agent",  
-                "User-Agent"             
-            )
-            .AllowAnyMethod()
-            .AllowCredentials(); // Important for SignalR
+            .AllowAnyHeader()                    // Allow all request headers
+            .AllowAnyMethod()                    // Allow all HTTP methods
+            .AllowCredentials()                  // Allow credentials (cookies, auth headers)
+            .WithExposedHeaders("*")             // Expose all response headers to client
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10)); // Cache preflight for 10 minutes
         });
 });
 
@@ -115,6 +112,9 @@ if (app.Environment.IsDevelopment())
 
 //app.UseHttpsRedirection();
 
+// IMPORTANT: CORS must be called before other middleware
+app.UseCors("AllowWeb");
+
 // Add routing
 app.UseRouting();
 
@@ -125,7 +125,7 @@ app.Use(async (context, next) =>
     await next();
     Console.WriteLine($"[TRACE] Response {context.Response.StatusCode} for {context.Request.Path}");
 });
-app.UseCors("AllowWeb");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -143,7 +143,8 @@ app.UseHangfireJobs();
 // Map SignalR Hub at two paths:
 // 1. /notificationHub - for localhost/backward compatibility
 // 2. /api/v1/notificationHub - for production (matches API routing)
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notificationHub")
+    .RequireCors("AllowWeb"); // Apply CORS policy to the hub
 app.MapHub<NotificationHub>("/api/v1/notificationHub")
     .RequireCors("AllowWeb"); // Apply CORS policy to the hub
 
