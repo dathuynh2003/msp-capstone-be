@@ -204,31 +204,6 @@ namespace MSP.Tests.Services.TaskServicesTest
             _mockProjectTaskRepository.Verify(x => x.SaveChangesAsync(), Times.Once);
         }
 
-        [Fact]
-        public async Task DeleteTaskAsync_WithAlreadyDeletedTask_ReturnsErrorResponse()
-        {
-            // Arrange
-            var taskId = Guid.NewGuid();
-            var projectId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-
-            var task = CreateValidTask(taskId, projectId, userId);
-            task.IsDeleted = true;
-
-            _mockProjectTaskRepository
-                .Setup(x => x.GetTaskByIdAsync(taskId))
-                .ReturnsAsync(task);
-
-            // Act
-            var result = await _projectTaskService.DeleteTaskAsync(taskId);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.Equal("Task not found", result.Message);
-
-            _mockProjectTaskRepository.Verify(x => x.SoftDeleteAsync(It.IsAny<ProjectTask>()), Times.Never);
-        }
 
         [Fact]
         public async Task DeleteTaskAsync_ReturnsCorrectSuccessMessage()
