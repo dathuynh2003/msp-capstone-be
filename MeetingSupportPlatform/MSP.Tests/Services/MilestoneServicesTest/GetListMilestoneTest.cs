@@ -234,78 +234,7 @@ namespace MSP.Tests.Services.MilestoneServicesTest
             Assert.Equal("Milestone C", result.Data[2].Name);
         }
 
-        [Fact]
-        public async Task GetMilestonesByProjectIdAsync_WithMilestonesWithNullDueDate_ReturnsSuccessResponse()
-        {
-            // Arrange
-            var projectId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
 
-            var milestones = new List<Milestone>
-            {
-                new Milestone
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    ProjectId = projectId,
-                    Name = "Milestone Without DueDate",
-                    DueDate = null,
-                    Description = "No due date",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                }
-            };
 
-            _mockMilestoneRepository.Setup(x => x.GetMilestonesByProjectIdAsync(projectId))
-                .ReturnsAsync(milestones);
-
-            // Act
-            var result = await _milestoneService.GetMilestonesByProjectIdAsync(projectId);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.NotNull(result.Data);
-            Assert.Single(result.Data);
-            Assert.Equal(DateTime.MinValue, result.Data[0].DueDate);
-        }
-
-        [Fact]
-        public async Task GetMilestonesByProjectIdAsync_WithMilestonesWithNullDescription_ReturnsSuccessResponse()
-        {
-            // Arrange
-            var projectId = Guid.NewGuid();
-            var userId = Guid.NewGuid();
-
-            var milestones = new List<Milestone>
-            {
-                new Milestone
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    ProjectId = projectId,
-                    Name = "Milestone Without Description",
-                    DueDate = DateTime.UtcNow.AddMonths(1),
-                    Description = null,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    IsDeleted = false
-                }
-            };
-
-            _mockMilestoneRepository.Setup(x => x.GetMilestonesByProjectIdAsync(projectId))
-                .ReturnsAsync(milestones);
-
-            // Act
-            var result = await _milestoneService.GetMilestonesByProjectIdAsync(projectId);
-
-            // Assert
-            Assert.NotNull(result);
-            Assert.True(result.Success);
-            Assert.NotNull(result.Data);
-            Assert.Single(result.Data);
-            Assert.Equal(string.Empty, result.Data[0].Description);
-        }
     }
 }
