@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MSP.Application.Extensions;
 using MSP.Infrastructure.Extensions;
 using MSP.WebAPI.Hubs;
+using MSP.WebAPI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -122,7 +123,14 @@ app.Use(async (context, next) =>
 app.UseCors("AllowWeb");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHangfireDashboard();
+
+// Configure Hangfire Dashboard with custom authorization
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() },
+    DashboardTitle = "MSP Hangfire Dashboard",
+    StatsPollingInterval = 2000 // Refresh stats every 2 seconds
+});
 
 // Configure Hangfire Recurring Jobs
 app.UseHangfireJobs();
