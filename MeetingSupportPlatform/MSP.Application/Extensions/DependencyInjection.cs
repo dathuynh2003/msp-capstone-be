@@ -2,14 +2,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using MSP.Application.Services.Implementations.Auth;
 using MSP.Application.Services.Implementations.Limitation;
-using MSP.Application.Services.Implementations.Meeting;
 using MSP.Application.Services.Implementations.Milestone;
 using MSP.Application.Services.Implementations.OrganizationInvitation;
 using MSP.Application.Services.Implementations.Cleanup;
 using MSP.Application.Services.Interfaces.Document;
 using MSP.Application.Services.Implementations.Document;
 using MSP.Application.Services.Implementations.Package;
-using MSP.Application.Services.Implementations.Payment;
 using MSP.Application.Services.Implementations.Project;
 using MSP.Application.Services.Implementations.ProjectTask;
 using MSP.Application.Services.Implementations.SubscriptionService;
@@ -33,8 +31,8 @@ using MSP.Application.Services.Interfaces.TaskHistory;
 using MSP.Application.Services.Interfaces.Todos;
 using MSP.Application.Services.Interfaces.Users;
 using MSP.Application.Services.Interfaces.Comment;
-using PayOS;
 using MSP.Application.Services.Interfaces.Subscription;
+using MSP.Application.Services.Implementations.Meeting;
 
 namespace MSP.Application.Extensions
 {
@@ -44,7 +42,6 @@ namespace MSP.Application.Extensions
         {
             // Register Business Services
             services.AddScoped<IAccountService, AccountService>();
-            services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
             services.AddScoped<INotificationService, MSP.Application.Services.Implementations.Notification.NotificationService>();
             services.AddScoped<ISummarizeTextService, SummarizeTextService>();
             services.AddScoped<IProjectService, ProjectService>();
@@ -57,7 +54,6 @@ namespace MSP.Application.Extensions
             services.AddScoped<IDocumentService, DocumentService>();
             services.AddScoped<ITaskHistoryService, TaskHistoryService>();
             services.AddScoped<IPackageService, PackageService>();
-            services.AddScoped<IPaymentService, PayOSService>();
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<ILimitationService, LimitationService>();
             services.AddScoped<ICommentService, CommentService>();
@@ -72,18 +68,13 @@ namespace MSP.Application.Extensions
             services.AddScoped<TaskReminderCronJobService>();
             services.AddScoped<ProjectCompletionReminderCronJobService>();
 
-            // Register StreamSettings from appsettings.json
-            services.Configure<StreamSettings>(
-                configuration.GetSection("Stream"));
 
             //Configure PayOS Settings
-            services.Configure<PayOSConfiguration>(configuration.GetSection("PayOS"));
+
 
             // Register HttpClientFactory
             services.AddHttpClient();
 
-            // Register StreamService with DI
-            services.AddScoped<IStreamService, StreamService>();
 
             return services;
         }

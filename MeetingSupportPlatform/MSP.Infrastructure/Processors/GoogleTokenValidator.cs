@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using MSP.Application.Models.Requests.Auth;
 using MSP.Application.Services.Interfaces.Auth;
 
-namespace MSP.Application.Services.Implementations.Auth
+namespace MSP.Infrastructure.Processors
 {
     public class GoogleTokenValidator : IGoogleTokenValidator
     {
