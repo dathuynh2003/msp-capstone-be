@@ -135,6 +135,59 @@ namespace MSP.Tests.Services.MilestoneServicesTest
             Assert.Equal("Milestone not found", result.Message);
         }
 
+        [Fact]
+        public async Task GetMilestoneByIdAsync_WithRepositoryFailure_ThrowsException()
+        {
+            // Arrange
+            var milestoneId = Guid.NewGuid();
 
+            _mockMilestoneRepository.Setup(x => x.GetMilestoneByIdAsync(milestoneId))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _milestoneService.GetMilestoneByIdAsync(milestoneId));
+        }
+
+        [Fact]
+        public async Task GetMilestoneByIdAsync_VerifyResponseDataIntegrity()
+        {
+            // Arrange
+            var milestoneId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            var dueDate = DateTime.UtcNow.AddMonths(2);
+            var createdAt = DateTime.UtcNow.AddDays(-10);
+            var updatedAt = DateTime.UtcNow.AddDays(-2);
+
+            var milestone = new Milestone
+            {
+                Id = milestoneId,
+                UserId = userId,
+                ProjectId = projectId,
+                Name = "Important Milestone",
+                DueDate = dueDate,
+                Description = "Detailed milestone description",
+                CreatedAt = createdAt,
+                UpdatedAt = updatedAt,
+                IsDeleted = false
+            };
+
+            _mockMilestoneRepository.Setup(x => x.GetMilestoneByIdAsync(milestoneId))
+                .ReturnsAsync(milestone);
+
+            // Act
+            var result = await _milestoneService.GetMilestoneByIdAsync(milestoneId);
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal(milestoneId, result.Data.Id);
+            Assert.Equal("Important Milestone", result.Data.Name);
+            Assert.Equal(projectId, result.Data.ProjectId);
+            Assert.Equal("Detailed milestone description", result.Data.Description);
+            Assert.Equal(dueDate, result.Data.DueDate);
+            Assert.Equal(createdAt, result.Data.CreatedAt);
+            Assert.Equal(updatedAt, result.Data.UpdatedAt);
+        }
     }
 }

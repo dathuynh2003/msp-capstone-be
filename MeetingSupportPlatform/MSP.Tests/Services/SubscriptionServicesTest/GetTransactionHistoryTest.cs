@@ -259,6 +259,33 @@ namespace MSP.Tests.Services.SubscriptionServicesTest
             _mockSubscriptionRepository.Verify(x => x.GetByUserIdAsync(userId), Times.Once);
         }
 
+        [Fact]
+        public async Task GetSubscriptionsByUserIdAsync_WithInvalidUserId_ReturnsEmptyList()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var emptySubscriptions = new List<Subscription>();
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync((User)null);
+
+            _mockSubscriptionRepository
+                .Setup(x => x.GetByUserIdAsync(userId))
+                .ReturnsAsync(emptySubscriptions);
+
+            // Act
+            var result = await _subscriptionService.GetSubscriptionsByUserIdAsync(userId);
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.Equal("Get subscriptions successfully", result.Message);
+            Assert.NotNull(result.Data);
+            Assert.Empty(result.Data);
+
+            _mockSubscriptionRepository.Verify(x => x.GetByUserIdAsync(userId), Times.Once);
+        }
+
         #endregion
     }
 }

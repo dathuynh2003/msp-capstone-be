@@ -159,11 +159,14 @@ namespace MSP.Tests.Services.SubscriptionServicesTest
             _mockSubscriptionRepository.Verify(x => x.GetActiveSubscriptionByUserIdAsync(It.IsAny<Guid>()), Times.Never);
         }
 
+
         [Fact]
-        public async Task GetActiveSubscriptionByUserIdAsync_WithNoActiveSubscription_ReturnsErrorResponse()
+        public async Task GetActiveSubscriptionByUserIdAsync_WithMultipleLimitations_ReturnsSuccessResponse()
         {
             // Arrange
             var userId = Guid.NewGuid();
+            var subscriptionId = Guid.NewGuid();
+            var packageId = Guid.NewGuid();
 
             var user = new User
             {
@@ -173,28 +176,92 @@ namespace MSP.Tests.Services.SubscriptionServicesTest
                 CreatedAt = DateTime.UtcNow
             };
 
+            var limitations = new List<Limitation>
+            {
+                new Limitation
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Projects",
+                    Description = "Number of projects",
+                    IsUnlimited = false,
+                    LimitValue = 20,
+                    LimitUnit = "projects",
+                    IsDeleted = false
+                },
+                new Limitation
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Meetings",
+                    Description = "Number of meetings",
+                    IsUnlimited = false,
+                    LimitValue = 100,
+                    LimitUnit = "meetings",
+                    IsDeleted = false
+                },
+                new Limitation
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Members",
+                    Description = "Number of team members",
+                    IsUnlimited = true,
+                    LimitValue = null,
+                    LimitUnit = "members",
+                    IsDeleted = false
+                }
+            };
+
+            var package = new Package
+            {
+                Id = packageId,
+                Name = "Enterprise",
+                Description = "Enterprise package",
+                Price = 500000,
+                BillingCycle = 12,
+                Currency = "VND",
+                Limitations = limitations
+            };
+
+            var subscription = new Subscription
+            {
+                Id = subscriptionId,
+                UserId = userId,
+                PackageId = packageId,
+                TotalPrice = 500000,
+                IsActive = true,
+                Status = "ACTIVE",
+                PaymentMethod = "PayOS",
+                TransactionID = "TXN345678",
+                StartDate = DateTime.UtcNow.AddDays(-10),
+                EndDate = DateTime.UtcNow.AddDays(350),
+                PaidAt = DateTime.UtcNow.AddDays(-10),
+                User = user,
+                Package = package
+            };
+
             _mockUserManager
                 .Setup(x => x.FindByIdAsync(userId.ToString()))
                 .ReturnsAsync(user);
 
             _mockSubscriptionRepository
                 .Setup(x => x.GetActiveSubscriptionByUserIdAsync(userId))
-                .ReturnsAsync((Subscription)null);
+                .ReturnsAsync(subscription);
 
             // Act
             var result = await _subscriptionService.GetActiveSubscriptionByUserIdAsync(userId);
 
             // Assert
-            Assert.False(result.Success);
-            Assert.Equal("No active subscription found for the user", result.Message);
-            Assert.Null(result.Data);
+            Assert.True(result.Success);
+            Assert.Equal("Get active subscription successfully", result.Message);
+            Assert.NotNull(result.Data);
+            Assert.Equal(subscriptionId, result.Data.Id);
+            Assert.Equal("Enterprise", result.Data.Package.Name);
+            Assert.Equal(3, result.Data.Package.Limitations.Count);
+            Assert.Equal(12, result.Data.Package.BillingCycle);
+            Assert.True(result.Data.Package.Limitations.Any(l => l.IsUnlimited));
 
             _mockUserManager.Verify(x => x.FindByIdAsync(userId.ToString()), Times.Once);
             _mockSubscriptionRepository.Verify(x => x.GetActiveSubscriptionByUserIdAsync(userId), Times.Once);
         }
-
-
-
 
         #endregion
     }

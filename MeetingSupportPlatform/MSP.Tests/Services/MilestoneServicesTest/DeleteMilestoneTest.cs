@@ -300,5 +300,22 @@ namespace MSP.Tests.Services.MilestoneServicesTest
 
             _mockMilestoneRepository.Verify(x => x.SoftDeleteAsync(It.IsAny<Milestone>()), Times.Once);
         }
+
+        [Fact]
+        public async Task DeleteMilestoneAsync_WithRepositoryFailure_ThrowsException()
+        {
+            // Arrange
+            var milestoneId = Guid.NewGuid();
+
+            _mockProjectTaskRepository.Setup(x => x.GetTasksByMilestoneIdAsync(milestoneId))
+                .ReturnsAsync((List<ProjectTask>)null);
+            _mockMilestoneRepository.Setup(x => x.GetByIdAsync(milestoneId))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _milestoneService.DeleteMilestoneAsync(milestoneId));
+        }
+
+
     }
 }

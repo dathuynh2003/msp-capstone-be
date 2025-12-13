@@ -235,6 +235,235 @@ namespace MSP.Tests.Services.ProjectServicesTest
             Assert.NotEqual(default(DateTime), capturedProjectMember.JoinedAt);
         }
 
+        [Fact]
+        public async Task AddProjectMemberAsync_WithRepositoryFailure_ThrowsException()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+
+            var request = new AddProjectMemeberRequest
+            {
+                UserId = userId,
+                ProjectId = projectId
+            };
+
+            var user = CreateValidUser(userId);
+            var project = CreateValidProject(projectId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.GetByIdAsync(projectId))
+                .ReturnsAsync(project);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ThrowsAsync(new Exception("Database error"));
+
+            // Act & Assert
+            await Assert.ThrowsAsync<Exception>(() => _projectService.AddProjectMemberAsync(request));
+        }
+
+        [Fact]
+        public async Task AddProjectMemberAsync_WithNotificationFailure_StillSucceeds()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var projectMemberId = Guid.NewGuid();
+
+            var request = new AddProjectMemeberRequest
+            {
+                UserId = userId,
+                ProjectId = projectId
+            };
+
+            var user = CreateValidUser(userId);
+            var project = CreateValidProject(projectId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.GetByIdAsync(projectId))
+                .ReturnsAsync(project);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .Callback<ProjectMember>(pm => pm.Id = projectMemberId)
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockNotificationService
+                .Setup(x => x.CreateInAppNotificationAsync(It.IsAny<CreateNotificationRequest>()))
+                .ThrowsAsync(new Exception("Notification service error"));
+
+            // Act
+            var result = await _projectService.AddProjectMemberAsync(request);
+
+            // Assert - Should still succeed because exception is caught
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal(projectId, result.Data.ProjectId);
+            Assert.Equal(userId, result.Data.UserId);
+        }
+
+        [Fact]
+        public async Task AddProjectMemberAsync_VerifyJoinedAtTimestampIsSet()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var projectMemberId = Guid.NewGuid();
+            var beforeTime = DateTime.UtcNow;
+
+            var request = new AddProjectMemeberRequest
+            {
+                UserId = userId,
+                ProjectId = projectId
+            };
+
+            var user = CreateValidUser(userId);
+            var project = CreateValidProject(projectId);
+
+            ProjectMember capturedProjectMember = null;
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.GetByIdAsync(projectId))
+                .ReturnsAsync(project);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .Callback<ProjectMember>(pm =>
+                {
+                    pm.Id = projectMemberId;
+                    capturedProjectMember = pm;
+                })
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockNotificationService
+                .Setup(x => x.CreateInAppNotificationAsync(It.IsAny<CreateNotificationRequest>()))
+                .ReturnsAsync(ApiResponse<NotificationResponse>.SuccessResponse(null));
+
+            // Act
+            var result = await _projectService.AddProjectMemberAsync(request);
+            var afterTime = DateTime.UtcNow;
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.NotNull(capturedProjectMember);
+            Assert.True(capturedProjectMember.JoinedAt >= beforeTime && capturedProjectMember.JoinedAt <= afterTime);
+        }
+
+        [Fact]
+        public async Task AddProjectMemberAsync_VerifyNotificationIsSent()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var projectMemberId = Guid.NewGuid();
+
+            var request = new AddProjectMemeberRequest
+            {
+                UserId = userId,
+                ProjectId = projectId
+            };
+
+            var user = CreateValidUser(userId);
+            var project = CreateValidProject(projectId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.GetByIdAsync(projectId))
+                .ReturnsAsync(project);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .Callback<ProjectMember>(pm => pm.Id = projectMemberId)
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockNotificationService
+                .Setup(x => x.CreateInAppNotificationAsync(It.IsAny<CreateNotificationRequest>()))
+                .ReturnsAsync(ApiResponse<NotificationResponse>.SuccessResponse(null));
+
+            // Act
+            var result = await _projectService.AddProjectMemberAsync(request);
+
+            // Assert
+            Assert.True(result.Success);
+            _mockNotificationService.Verify(
+                x => x.CreateInAppNotificationAsync(It.IsAny<CreateNotificationRequest>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task AddProjectMemberAsync_VerifyResponseContainsCorrectProjectMemberId()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var projectMemberId = Guid.NewGuid();
+
+            var request = new AddProjectMemeberRequest
+            {
+                UserId = userId,
+                ProjectId = projectId
+            };
+
+            var user = CreateValidUser(userId);
+            var project = CreateValidProject(projectId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.GetByIdAsync(projectId))
+                .ReturnsAsync(project);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .Callback<ProjectMember>(pm => pm.Id = projectMemberId)
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockNotificationService
+                .Setup(x => x.CreateInAppNotificationAsync(It.IsAny<CreateNotificationRequest>()))
+                .ReturnsAsync(ApiResponse<NotificationResponse>.SuccessResponse(null));
+
+            // Act
+            var result = await _projectService.AddProjectMemberAsync(request);
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal(projectMemberId, result.Data.Id);
+        }
 
         #endregion
     }

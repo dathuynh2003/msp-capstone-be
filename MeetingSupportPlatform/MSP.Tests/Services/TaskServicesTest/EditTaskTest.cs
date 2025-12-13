@@ -362,5 +362,28 @@ namespace MSP.Tests.Services.TaskServicesTest
             Assert.True(result.Success);
             Assert.Equal("New Title", result.Data.Title);
         }
+
+        public class SimpleExecutionStrategy : Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy
+        {
+            public bool RetriesOnFailure => false;
+
+            public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, Func<Exception, int, Task<bool>>? verifySucceeded = null)
+                => await operation();
+
+            public async Task ExecuteAsync(Func<Task> operation, Func<Exception, Task<bool>>? verifySucceeded = null)
+                => await operation();
+
+            public T Execute<T>(Func<T> operation, Func<Exception, int, bool>? verifySucceeded = null)
+                => operation();
+
+            public void Execute(Action operation, Action<Exception, int>? verifySucceeded = null)
+                => operation();
+
+            public async Task<TResult> ExecuteAsync<TState, TResult>(TState state, Func<Microsoft.EntityFrameworkCore.DbContext, TState, CancellationToken, Task<TResult>> operation, Func<Microsoft.EntityFrameworkCore.DbContext, TState, CancellationToken, Task<Microsoft.EntityFrameworkCore.Storage.ExecutionResult<TResult>>>? verifySucceeded = null, CancellationToken cancellationToken = default)
+                => await operation(null, state, cancellationToken);
+
+            public TResult Execute<TState, TResult>(TState state, Func<Microsoft.EntityFrameworkCore.DbContext, TState, TResult> operation, Func<Microsoft.EntityFrameworkCore.DbContext, TState, Microsoft.EntityFrameworkCore.Storage.ExecutionResult<TResult>>? verifySucceeded = null)
+                => operation(null, state);
+        }
     }
 }

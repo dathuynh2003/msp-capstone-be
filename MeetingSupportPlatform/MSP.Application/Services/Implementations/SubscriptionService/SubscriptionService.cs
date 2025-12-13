@@ -142,6 +142,9 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
 
         public async Task<ApiResponse<IEnumerable<GetSubscriptionDetailResponse>>> GetSubscriptionsByUserIdAsync(Guid userId)
         {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return ApiResponse<IEnumerable<GetSubscriptionDetailResponse>>.ErrorResponse(null, "User not found");
             var subscriptions = await _subscriptionRepository.GetByUserIdAsync(userId);
             var response = subscriptions.Select(subscription => new GetSubscriptionDetailResponse
             {

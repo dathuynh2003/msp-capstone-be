@@ -163,7 +163,318 @@ namespace MSP.Tests.Services.ProjectServicesTest
             Assert.Equal("User does not have a Business Owner assigned", result.Message);
         }
 
+        [Fact]
+        public async Task CreateProjectAsync_WithNullDescription_ReturnsSuccessResponse()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
 
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = null,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => p.Id = projectId)
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            var result = await _projectService.CreateProjectAsync(createRequest);
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Null(result.Data.Description);
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_WithEmptyProjectName_ReturnsSuccessResponse()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = string.Empty,
+                Description = "Test project description",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => p.Id = projectId)
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            var result = await _projectService.CreateProjectAsync(createRequest);
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal(string.Empty, result.Data.Name);
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_WithInvalidDateRange_ReturnsSuccessResponse()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            var startDate = DateTime.UtcNow.AddMonths(1);
+            var endDate = DateTime.UtcNow;
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = "Test project description",
+                StartDate = startDate,
+                EndDate = endDate,
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => p.Id = projectId)
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            var result = await _projectService.CreateProjectAsync(createRequest);
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal(startDate, result.Data.StartDate);
+            Assert.Equal(endDate, result.Data.EndDate);
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_WithProjectRepositoryFailure_ThrowsException()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = "Test project description",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .ThrowsAsync(new Exception("Database error"));
+
+            await Assert.ThrowsAsync<Exception>(() => _projectService.CreateProjectAsync(createRequest));
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_WithProjectMemberRepositoryFailure_ThrowsException()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = "Test project description",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => p.Id = projectId)
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ThrowsAsync(new Exception("Database error"));
+
+            await Assert.ThrowsAsync<Exception>(() => _projectService.CreateProjectAsync(createRequest));
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_VerifyProjectMemberCreatedWithCorrectData()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            ProjectMember capturedProjectMember = null;
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = "Test project description",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => p.Id = projectId)
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .Callback<ProjectMember>(pm => capturedProjectMember = pm)
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            var result = await _projectService.CreateProjectAsync(createRequest);
+
+            Assert.True(result.Success);
+            Assert.NotNull(capturedProjectMember);
+            Assert.Equal(projectId, capturedProjectMember.ProjectId);
+            Assert.Equal(userId, capturedProjectMember.MemberId);
+        }
+
+        [Fact]
+        public async Task CreateProjectAsync_VerifyOwnerIdSetFromManagedById()
+        {
+            var userId = Guid.NewGuid();
+            var ownerId = Guid.NewGuid();
+            var projectId = Guid.NewGuid();
+            Project capturedProject = null;
+
+            var createRequest = new CreateProjectRequest
+            {
+                Name = "Test Project",
+                Description = "Test project description",
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                Status = "Active",
+                CreatedById = userId
+            };
+
+            var user = CreateValidUser(userId, ownerId);
+
+            _mockUserManager
+                .Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+
+            _mockProjectRepository
+                .Setup(x => x.AddAsync(It.IsAny<Project>()))
+                .Callback<Project>(p => {
+                    p.Id = projectId;
+                    capturedProject = p;
+                })
+                .ReturnsAsync((Project p) => p);
+
+            _mockProjectRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.AddAsync(It.IsAny<ProjectMember>()))
+                .ReturnsAsync((ProjectMember pm) => pm);
+
+            _mockProjectMemberRepository
+                .Setup(x => x.SaveChangesAsync())
+                .Returns(Task.CompletedTask);
+
+            var result = await _projectService.CreateProjectAsync(createRequest);
+
+            Assert.True(result.Success);
+            Assert.NotNull(capturedProject);
+            Assert.Equal(ownerId, capturedProject.OwnerId);
+        }
 
         #endregion
     }
