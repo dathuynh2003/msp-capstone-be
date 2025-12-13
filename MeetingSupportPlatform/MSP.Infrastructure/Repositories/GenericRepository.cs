@@ -396,5 +396,10 @@ namespace MSP.Infrastructure.Repositories
         {
             return _context.Database.CreateExecutionStrategy();
         }
+
+        public async Task LoadCollectionAsync<TProperty>(T entity, Expression<Func<T, IEnumerable<TProperty>>> navigationProperty) where TProperty : class
+        {
+            await _context.Entry(entity).Collection(navigationProperty).LoadAsync();
+        }
     }
 }

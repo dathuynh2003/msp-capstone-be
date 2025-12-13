@@ -92,5 +92,8 @@ namespace MSP.Application.Abstracts
         Task<IDbContextTransaction> BeginTransactionAsync();
 
         IExecutionStrategy CreateExecutionStrategy();
+
+        // Explicitly load navigation property
+        Task LoadCollectionAsync<TProperty>(T entity, Expression<Func<T, IEnumerable<TProperty>>> navigationProperty) where TProperty : class;
     }
 }

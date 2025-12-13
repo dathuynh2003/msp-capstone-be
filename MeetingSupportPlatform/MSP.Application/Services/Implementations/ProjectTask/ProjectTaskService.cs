@@ -698,21 +698,31 @@ namespace MSP.Application.Services.Implementations.ProjectTask
 
                     task.UpdatedAt = DateTime.UtcNow;
 
-                    // Cập nhật milestones
+                    // Cập nhật milestones với logic mới
                     if (request.MilestoneIds != null)
                     {
-                        var milestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
-                        if (milestones == null || milestones.Count() != request.MilestoneIds.Length || milestones.Any(m => m.IsDeleted))
+                        // Validate milestones exist
+                        var newMilestones = await _milestoneRepository.GetMilestonesByIdsAsync(request.MilestoneIds);
+                        if (newMilestones == null || newMilestones.Count() != request.MilestoneIds.Length || newMilestones.Any(m => m.IsDeleted))
                         {
                             await transaction.RollbackAsync();
                             throw new Exception("Milestone invalid");
                         }
 
-                        task.Milestones.Clear();
-                        foreach (var milestone in milestones)
+                        // Load current milestones collection explicitly
+                        await _projectTaskRepository.LoadCollectionAsync(task, t => t.Milestones);
+
+                        // Remove all existing milestones
+                        var existingMilestones = task.Milestones.ToList();
+                        foreach (var existingMilestone in existingMilestones)
                         {
-                            _milestoneRepository.Attach(milestone);
-                            task.Milestones.Add(milestone);
+                            task.Milestones.Remove(existingMilestone);
+                        }
+
+                        // Add new milestones
+                        foreach (var newMilestone in newMilestones)
+                        {
+                            task.Milestones.Add(newMilestone);
                         }
                     }
 
