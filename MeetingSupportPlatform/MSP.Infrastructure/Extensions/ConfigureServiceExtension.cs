@@ -1,10 +1,15 @@
 ﻿using AuthService.Infrastructure.Repositories;
+using Humanizer.Configuration;
+using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MSP.Application.Abstracts;
 using MSP.Application.Repositories;
+using MSP.Application.Services.Interfaces.Auth;
+using MSP.Application.Services.Interfaces.Meeting;
 using MSP.Application.Services.Interfaces.Notification;
+using MSP.Application.Services.Interfaces.Payment;
 using MSP.Infrastructure.Options;
 using MSP.Infrastructure.Processors;
 using MSP.Infrastructure.Repositories;
@@ -20,7 +25,10 @@ namespace MSP.Infrastructure.Extensions
         {
             // Configure Email Settings
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
-
+            // Configure PayOS Settings
+            services.Configure<PayOSConfiguration>(config.GetSection("PayOS"));
+            // Configure Stream Settings
+            services.Configure<StreamSettings>(config.GetSection("Stream"));
 
             // Register Processors
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
@@ -40,9 +48,13 @@ namespace MSP.Infrastructure.Extensions
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();  
             services.AddScoped<ILimitationRepository, LimitationRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
+            services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();    
 
-            // Register Services
+            // Register External Services
             services.AddScoped<IEmailSender, EmailSender>();
+            services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
+            services.AddScoped<IPaymentService, PayOSService>();
+            services.AddScoped<IStreamService, StreamService>();    
 
             return services;
         }

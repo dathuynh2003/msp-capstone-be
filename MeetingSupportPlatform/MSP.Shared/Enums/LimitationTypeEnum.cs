@@ -14,5 +14,6 @@ namespace MSP.Shared.Enums
         NumberMeeting,
         NumberMemberInProject,
         NumberMemberInMeeting,
+        MeetingDuration,
     }
 }

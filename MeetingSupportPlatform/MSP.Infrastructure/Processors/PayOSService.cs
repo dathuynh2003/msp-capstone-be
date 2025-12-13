@@ -25,7 +25,7 @@ using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
-namespace MSP.Application.Services.Implementations.Payment
+namespace MSP.Infrastructure.Processors
 {
     public class PayOSConfiguration
     {

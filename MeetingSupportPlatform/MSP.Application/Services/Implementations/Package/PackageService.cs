@@ -34,7 +34,8 @@ namespace MSP.Application.Services.Implementations.Package
                     { LimitationTypeEnum.NumberProject, 2 },
                     { LimitationTypeEnum.NumberMemberInProject, 3 },
                     { LimitationTypeEnum.NumberMeeting, 4 },
-                    { LimitationTypeEnum.NumberMemberInMeeting, 5 }
+                    { LimitationTypeEnum.MeetingDuration, 5 },
+                    { LimitationTypeEnum.NumberMemberInMeeting, 6 }
                 };
 
                 var response = packages.Select(p => new GetPackageResponse
@@ -86,7 +87,8 @@ namespace MSP.Application.Services.Implementations.Package
                 { LimitationTypeEnum.NumberProject, 2 },
                 { LimitationTypeEnum.NumberMemberInProject, 3 },
                 { LimitationTypeEnum.NumberMeeting, 4 },
-                { LimitationTypeEnum.NumberMemberInMeeting, 5 }
+                { LimitationTypeEnum.MeetingDuration, 5 },
+                { LimitationTypeEnum.NumberMemberInMeeting, 6 }
             };
             var response = new GetPackageResponse
             {
