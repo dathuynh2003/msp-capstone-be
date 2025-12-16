@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using MSP.Application.Abstracts;
+using MSP.Application.Helpers;
 using MSP.Application.Models.Requests.Payment;
 using MSP.Application.Models.Requests.Subscription;
 using MSP.Application.Models.Responses.Limitation;
@@ -41,7 +42,7 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
         }
         public async Task<ApiResponse<GetSubscriptionResponse>> CreateSubscriptionAsync(CreateSubscriptionRequest request)
         {
-            var package = await _packageRepository.GetByIdAsync(request.PackageId);
+            var package = await _packageRepository.GetPackageByIdAsync(request.PackageId);
             if (package == null)
             {
                 return ApiResponse<GetSubscriptionResponse>.ErrorResponse(null, "Package not found");
@@ -70,6 +71,7 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             subscription.CreatedAt = DateTime.UtcNow;
             subscription.TransactionID = paymentLink.OrderCode.ToString();
             subscription.Status = paymentLink.Status;
+            SubscriptionSnapshotHelper.CapturePackageSnapshot(subscription, package);
             await _subscriptionRepository.AddAsync(subscription);
             await _subscriptionRepository.SaveChangesAsync();
             // 5. Trả về response
@@ -95,6 +97,39 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             {
                 return ApiResponse<GetSubscriptionDetailResponse>.ErrorResponse(null, "No active subscription found for the user");
             }
+            
+            GetPackageResponse packageResponse;
+            List<GetLimitationResponse> limitations;
+            
+            if (!string.IsNullOrEmpty(subscription.SnapshotPackageJson))
+            {
+                packageResponse = SubscriptionSnapshotHelper.DeserializePackageSnapshot(subscription.SnapshotPackageJson);
+                limitations = SubscriptionSnapshotHelper.DeserializeLimitationsSnapshot(subscription.SnapshotLimitationsJson);
+                packageResponse.Limitations = limitations;
+            }
+            else
+            {
+                packageResponse = new GetPackageResponse
+                {
+                    Id = subscription.Package.Id,
+                    Name = subscription.Package.Name,
+                    Description = subscription.Package.Description,
+                    Price = subscription.Package.Price,
+                    BillingCycle = subscription.Package.BillingCycle,
+                    Currency = subscription.Package.Currency,
+                    Limitations = subscription.Package.Limitations.Select(l => new GetLimitationResponse
+                    {
+                        Id = l.Id,
+                        Name = l.Name,
+                        Description = l.Description,
+                        IsUnlimited = l.IsUnlimited,
+                        LimitValue = l.LimitValue,
+                        LimitUnit = l.LimitUnit,
+                        IsDeleted = l.IsDeleted
+                    }).ToList()
+                };
+            }
+            
             var response = new GetSubscriptionDetailResponse
             {
                 Id = subscription.Id,
@@ -115,25 +150,7 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
                     Email = subscription.User.Email,
                     CreatedAt = subscription.User.CreatedAt,
                 },
-                Package = new GetPackageResponse
-                {
-                    Id = subscription.Package.Id,
-                    Name = subscription.Package.Name,
-                    Description = subscription.Package.Description,
-                    Price = subscription.Package.Price,
-                    BillingCycle = subscription.Package.BillingCycle,
-                    Currency = subscription.Package.Currency,
-                    Limitations = subscription.Package.Limitations.Select(l => new GetLimitationResponse
-                    {
-                        Id = l.Id,
-                        Name = l.Name,
-                        Description = l.Description,
-                        IsUnlimited = l.IsUnlimited,
-                        LimitValue = l.LimitValue,
-                        LimitUnit = l.LimitUnit,
-                        IsDeleted = l.IsDeleted
-                    }).ToList()
-                },
+                Package = packageResponse,
             };
             return ApiResponse<GetSubscriptionDetailResponse>.SuccessResponse(response, "Get active subscription successfully");
         }
@@ -196,16 +213,37 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
             {
                 return ApiResponse<GetSubscriptionUsageResponse>.ErrorResponse(null, "No active subscription found for the user");
             }
-            // Lấy số lượng đã dùng cho mỗi limitation
+            
+            List<GetLimitationResponse> limitations;
+            if (!string.IsNullOrEmpty(subscription.SnapshotLimitationsJson))
+            {
+                limitations = SubscriptionSnapshotHelper.DeserializeLimitationsSnapshot(subscription.SnapshotLimitationsJson);
+            }
+            else
+            {
+                limitations = subscription.Package.Limitations
+                    .Where(l => !l.IsDeleted)
+                    .Select(l => new GetLimitationResponse
+                    {
+                        Id = l.Id,
+                        Name = l.Name,
+                        Description = l.Description,
+                        IsUnlimited = l.IsUnlimited,
+                        LimitValue = l.LimitValue,
+                        LimitUnit = l.LimitUnit,
+                        IsDeleted = l.IsDeleted
+                    }).ToList();
+            }
+            
             var limitationUsages = new List<GetLimitationUsageResponse>();
 
-            foreach (var l in subscription.Package.Limitations.Where(l => !l.IsDeleted))
+            foreach (var l in limitations)
             {
-                int used = l.LimitationType switch
+                int used = l.Id switch
                 {
-                    nameof(LimitationTypeEnum.NumberProject) => await _projectRepository.CountProjectsAsync(userId),
-                    nameof(LimitationTypeEnum.NumberMeeting) => await _meetingRepository.CountMeetingsAsync(userId),
-                    nameof(LimitationTypeEnum.NumberMemberInOrganization) => await _organizationInviteRepository.CountMembersInOrganizationAsync(userId),
+                    var id when subscription.Package?.Limitations?.FirstOrDefault(x => x.Id == id)?.LimitationType == nameof(LimitationTypeEnum.NumberProject) => await _projectRepository.CountProjectsAsync(userId),
+                    var id when subscription.Package?.Limitations?.FirstOrDefault(x => x.Id == id)?.LimitationType == nameof(LimitationTypeEnum.NumberMeeting) => await _meetingRepository.CountMeetingsAsync(userId),
+                    var id when subscription.Package?.Limitations?.FirstOrDefault(x => x.Id == id)?.LimitationType == nameof(LimitationTypeEnum.NumberMemberInOrganization) => await _organizationInviteRepository.CountMembersInOrganizationAsync(userId),
                     _ => 0
                 };
 
@@ -217,12 +255,16 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
                     IsUnlimited = l.IsUnlimited,
                     LimitValue = l.LimitValue,
                     LimitUnit = l.LimitUnit,
-                    LimitationType = l.LimitationType,
+                    LimitationType = subscription.Package?.Limitations?.FirstOrDefault(x => x.Id == l.Id)?.LimitationType ?? string.Empty,
                     UsedValue = used
                 });
             }
 
-
+            GetPackageResponse packageSnapshot = null;
+            if (!string.IsNullOrEmpty(subscription.SnapshotPackageJson))
+            {
+                packageSnapshot = SubscriptionSnapshotHelper.DeserializePackageSnapshot(subscription.SnapshotPackageJson);
+            }
 
             var response = new GetSubscriptionUsageResponse
             {
@@ -239,11 +281,11 @@ namespace MSP.Application.Services.Implementations.SubscriptionService
                 Package = new GetPackageUsageResponse
                 {
                     Id = subscription.PackageId,
-                    Name = subscription.Package.Name,
-                    Description = subscription.Package.Description,
-                    Price = subscription.Package.Price,
-                    Currency = subscription.Package.Currency,
-                    BillingCycle = subscription.Package.BillingCycle,
+                    Name = packageSnapshot?.Name ?? subscription.Package.Name,
+                    Description = packageSnapshot?.Description ?? subscription.Package.Description,
+                    Price = packageSnapshot?.Price ?? subscription.Package.Price,
+                    Currency = packageSnapshot?.Currency ?? subscription.Package.Currency,
+                    BillingCycle = packageSnapshot?.BillingCycle ?? subscription.Package.BillingCycle,
                     Limitations = limitationUsages.ToList()
                 }
             };
