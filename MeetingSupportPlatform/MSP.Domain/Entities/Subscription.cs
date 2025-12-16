@@ -16,5 +16,7 @@ namespace MSP.Domain.Entities
         public virtual Package Package { get; set; }
         public Guid UserId { get; set; }
         public virtual User User { get; set; }
+        public string? SnapshotPackageJson { get; set; }
+        public string? SnapshotLimitationsJson { get; set; }
     }
 }

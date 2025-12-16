@@ -6,6 +6,7 @@ using MSP.Application.Models.Responses.ProjectTask;
 using MSP.Application.Models.Responses.Todo;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Todos;
+using MSP.Application.Services.Interfaces.TaskHistory;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
 
@@ -17,13 +18,20 @@ namespace MSP.Application.Services.Implementations.Todos
         private readonly ITodoRepository _todoRepository;
         private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly IMeetingRepository _meetingRepository;
+        private readonly ITaskHistoryService _taskHistoryService;
 
-        public TodoService(UserManager<User> userManager, ITodoRepository todoRepository, IMeetingRepository meetingRepository, IProjectTaskRepository projectTaskRepository)
+        public TodoService(
+            UserManager<User> userManager, 
+            ITodoRepository todoRepository, 
+            IMeetingRepository meetingRepository, 
+            IProjectTaskRepository projectTaskRepository,
+            ITaskHistoryService taskHistoryService)
         {
             _userManager = userManager;
             _todoRepository = todoRepository;
             _meetingRepository = meetingRepository;
             _projectTaskRepository = projectTaskRepository;
+            _taskHistoryService = taskHistoryService;
         }
 
         public async Task<bool> SoftDeleteTodosByMeetingId(Guid meetingId)
@@ -81,28 +89,66 @@ namespace MSP.Application.Services.Implementations.Todos
                     Status = task.Status,
                     ProjectId = task.ProjectId,
                     UserId = task.UserId,
-                    //TodoId = task.TodoId
-                    // các field khác nếu có
                 });
             }
 
-            if (todos.Any())
+            // Sử dụng transaction để đảm bảo consistency
+            var strategy = _projectTaskRepository.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                await _todoRepository.UpdateRangeAsync(todos);
-                await _todoRepository.SaveChangesAsync();
-            }
-            if (tasks.Any())
-            {
-                await _projectTaskRepository.AddRangeAsync(tasks);
-                await _projectTaskRepository.SaveChangesAsync();
-            }
+                using var transaction = await _projectTaskRepository.BeginTransactionAsync();
+                try
+                {
+                    // Update todos status
+                    if (todos.Any())
+                    {
+                        await _todoRepository.UpdateRangeAsync(todos);
+                        await _todoRepository.SaveChangesAsync();
+                    }
 
-            // Trả về response vui lòng gồm kết quả và cảnh báo các id lỗi (nếu có)
-            //if (failedIds.Any())
-            //{
-            //    var warnMsg = $"Các To-do sau không thể convert do thiếu dữ liệu: {string.Join(", ", failedIds.Select(x => x.ToString()))}";
-            //    return ApiResponse<List<GetTaskResponse>>.ErrorResponse(responseTasks, warnMsg);
-            //}
+                    // Add tasks
+                    if (tasks.Any())
+                    {
+                        await _projectTaskRepository.AddRangeAsync(tasks);
+                        await _projectTaskRepository.SaveChangesAsync();
+
+                        // CREATE TASK HISTORY for each converted task
+                        foreach (var task in tasks)
+                        {
+                            // Get the meeting creator as the actor (who converted the todo)
+                            var todo = todos.FirstOrDefault(t => t.Id == task.TodoId);
+                            var meeting = todo?.Meeting;
+                            var creatorId = meeting?.CreatedById ?? Guid.Empty;
+
+                            // Track task creation
+                            await _taskHistoryService.TrackTaskCreationAsync(
+                                task.Id,
+                                creatorId,
+                                task.UserId);
+
+                            // Track assignment if user is assigned
+                            if (task.UserId.HasValue)
+                            {
+                                await _taskHistoryService.TrackTaskAssignmentAsync(
+                                    task.Id,
+                                    null, // fromUserId = null (first assignment)
+                                    task.UserId.Value,
+                                    creatorId);
+                            }
+                        }
+
+                        await _projectTaskRepository.SaveChangesAsync();
+                    }
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
+
             return ApiResponse<List<GetTaskResponse>>.SuccessResponse(responseTasks);
         }
 
@@ -130,7 +176,6 @@ namespace MSP.Application.Services.Implementations.Todos
 
             var todo = new Todo
             {
-
                 MeetingId = request.MeetingId,
                 UserId = request.AssigneeId,
                 Title = request.Title,
@@ -175,8 +220,7 @@ namespace MSP.Application.Services.Implementations.Todos
             var todo = await _todoRepository.GetByIdAsync(todoId);
             if (todo == null)
                 return ApiResponse<string>.ErrorResponse(null, "Todo not found");
-            //await _todoRepository.HardDeleteAsync(todo);
-            //await _todoRepository.SaveChangesAsync();
+            
             todo.Status = Shared.Enums.TodoStatus.Deleted;
             todo.IsDeleted = true;
             await _todoRepository.UpdateAsync(todo);
