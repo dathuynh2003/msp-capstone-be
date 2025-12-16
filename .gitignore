@@ -337,3 +337,5 @@ appsettings.Development.json
 *.sln.docstates
 # Logs
 MeetingSupportPlatform/MSP.WebAPI/*.text
+# Firebase Admin SDK
+**/FirebaseConfig/*.json

@@ -22,9 +22,10 @@ namespace MSP.Application.Services.Implementations.Users
         private readonly IOrganizationInviteRepository _organizationInviteRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
         private readonly IProjectRepository _projectRepository;
+        private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly IPackageRepository _packageRepository;
-        public UserService(UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IOrganizationInviteRepository organizationInviteRepository, IProjectMemberRepository projectMemberRepository, IProjectRepository projectRepository, ISubscriptionRepository subscriptionRepository, IPackageRepository packageRepository)
+        public UserService(UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IOrganizationInviteRepository organizationInviteRepository, IProjectMemberRepository projectMemberRepository, IProjectRepository projectRepository, IProjectTaskRepository projectTaskRepository, ISubscriptionRepository subscriptionRepository, IPackageRepository packageRepository)
         {
             _userManager = userManager;
             _userRepository = userRepository;
@@ -32,6 +33,7 @@ namespace MSP.Application.Services.Implementations.Users
             _organizationInviteRepository = organizationInviteRepository;
             _projectMemberRepository = projectMemberRepository;
             _projectRepository = projectRepository;
+            _projectTaskRepository = projectTaskRepository;
             _subscriptionRepository = subscriptionRepository;
             _packageRepository = packageRepository;
         }
@@ -446,6 +448,67 @@ namespace MSP.Application.Services.Implementations.Users
                 }
                 await _projectMemberRepository.UpdateRangeAsync(projectMemberships);
                 await _projectMemberRepository.SaveChangesAsync();
+
+                // 7. XỬ LÝ TASKS CHƯA HOÀN THÀNH: Unassign các task đang được giao cho member
+                try
+                {
+                    if (projectIds.Any())
+                    {
+                        // Lấy tất cả tasks của member trong các projects
+                        var memberTasks = new List<Domain.Entities.ProjectTask>();
+                        foreach (var projectId in projectIds)
+                        {
+                            var tasks = await _projectTaskRepository.GetTasksByProjectIdAsync(projectId);
+                            memberTasks.AddRange(tasks.Where(t => t.UserId == memberId));
+                        }
+
+                        // Filter tasks chưa hoàn thành
+                        var incompleteTasks = memberTasks
+                            .Where(t => t.Status != TaskEnum.Done.ToString() && 
+                                       t.Status != TaskEnum.Cancelled.ToString())
+                            .ToList();
+
+                        if (incompleteTasks.Any())
+                        {
+                            foreach (var task in incompleteTasks)
+                            {
+                                task.UserId = null;
+                                task.UpdatedAt = now;
+                                await _projectTaskRepository.UpdateAsync(task);
+
+                                // Notify reviewer if exists
+                                if (task.ReviewerId.HasValue)
+                                {
+                                    var notification = new CreateNotificationRequest
+                                    {
+                                        UserId = task.ReviewerId.Value,
+                                        Title = "Task Unassigned - Member Removed",
+                                        Message = $"Task '{task.Title}' has been unassigned because {member.FullName} was removed from the organization.",
+                                        Type = NotificationTypeEnum.TaskUpdate.ToString(),
+                                        EntityId = task.Id.ToString(),
+                                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                                        {
+                                            TaskId = task.Id,
+                                            TaskTitle = task.Title,
+                                            ProjectId = task.ProjectId,
+                                            FormerAssignee = member.FullName,
+                                            Reason = "MemberRemovedFromOrganization"
+                                        })
+                                    };
+
+                                    await _notificationService.CreateInAppNotificationAsync(notification);
+                                }
+                            }
+
+                            await _projectTaskRepository.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the remove operation
+                    Console.WriteLine($"Failed to unassign tasks for removed member {memberId}: {ex.Message}");
+                }
 
                 return ApiResponse<string>.SuccessResponse(
                     $"Removed member from organization and updated {projectMemberships.Count} project(s).",

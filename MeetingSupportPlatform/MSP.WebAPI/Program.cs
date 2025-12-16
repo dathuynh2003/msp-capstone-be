@@ -9,6 +9,9 @@ using MSP.WebAPI.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Initialize Firebase Admin SDK
+builder.Environment.InitializeFirebaseAdminSDK(builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>());
+
 // Services Registration
 builder.Services.AddControllers();
 builder.Services.AddInfrastuctureService(builder.Configuration);

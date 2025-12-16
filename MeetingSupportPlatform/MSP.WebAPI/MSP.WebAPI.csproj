@@ -21,4 +21,14 @@
 	<ProjectReference Include="..\MSP.Infrastructure\MSP.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="FirebaseConfig\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="FirebaseConfig\ai-msp-firebase-adminsdk-fbsvc-c42dd34434.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

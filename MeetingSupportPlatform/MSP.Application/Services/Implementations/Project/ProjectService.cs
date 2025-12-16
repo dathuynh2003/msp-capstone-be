@@ -362,9 +362,9 @@ namespace MSP.Application.Services.Implementations.Project
             var user = await _userManager.FindByIdAsync(managerId.ToString());
             if (user == null)
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "User not found");
-            // Lấy danh sách ProjectMember của member
+            // Lấy danh sách ProjectMember của manager - CHỈ LẤY ACTIVE MEMBERSHIPS (LeftAt == null)
             var projectMembers = await _projectMemberRepository.FindWithIncludePagedAsync(
-                predicate: pm => pm.MemberId == managerId,
+                predicate: pm => pm.MemberId == managerId && !pm.LeftAt.HasValue,  // Thêm điều kiện LeftAt == null
                 include: query => query.Include(pm => pm.Project).ThenInclude(p => p.Owner)
                                        .Include(pm => pm.Project).ThenInclude(p => p.CreatedBy),
                 pageNumber: request.PageIndex,
@@ -423,7 +423,8 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "No results found. Try adjusting your search criteria.");
             }
 
-            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == managerId && !pm.Project.IsDeleted);
+            // Cập nhật totalItems - chỉ đếm active memberships
+            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == managerId && !pm.Project.IsDeleted && !pm.LeftAt.HasValue);
 
             var pagingResponse = new PagingResponse<GetProjectResponse>
             {
@@ -442,9 +443,9 @@ namespace MSP.Application.Services.Implementations.Project
             if (user == null)
                 return ApiResponse<PagingResponse<GetProjectResponse>>.ErrorResponse(null, "User not found");
 
-            // Lấy danh sách ProjectMember của member
+            // Lấy danh sách ProjectMember của member - CHỈ LẤY ACTIVE MEMBERSHIPS (LeftAt == null)
             var projectMembers = await _projectMemberRepository.FindWithIncludePagedAsync(
-                predicate: pm => pm.MemberId == memberId,
+                predicate: pm => pm.MemberId == memberId && !pm.LeftAt.HasValue,  // Thêm điều kiện LeftAt == null
                 include: query => query.Include(pm => pm.Project).ThenInclude(p => p.Owner)
                                        .Include(pm => pm.Project).ThenInclude(p => p.CreatedBy),
                 pageNumber: request.PageIndex,
@@ -499,7 +500,8 @@ namespace MSP.Application.Services.Implementations.Project
                 });
             }
 
-            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == memberId && !pm.Project.IsDeleted);
+            // Cập nhật totalItems - chỉ đếm active memberships
+            var totalItems = await _projectMemberRepository.CountAsync(pm => pm.MemberId == memberId && !pm.Project.IsDeleted && !pm.LeftAt.HasValue);
 
             var pagingResponse = new PagingResponse<GetProjectResponse>
             {
@@ -958,6 +960,13 @@ namespace MSP.Application.Services.Implementations.Project
             if (rs == null)
                 return ApiResponse<ProjectDetailResponse>.ErrorResponse(null, "Project not found");
 
+            // VALIDATION: Kiểm tra user có còn active trong project không
+            var activeMembership = rs.ProjectMembers.FirstOrDefault(pm => pm.MemberId == userId && !pm.LeftAt.HasValue);
+            if (activeMembership == null && rs.OwnerId != userId)  // Allow owner to always view
+            {
+                return ApiResponse<ProjectDetailResponse>.ErrorResponse(null, "You are no longer a member of this project");
+            }
+
             var result = new ProjectDetailResponse
             {
                 ProjectId = rs.Id,
@@ -980,13 +989,16 @@ namespace MSP.Application.Services.Implementations.Project
                     Email = rs.CreatedBy.Email,
                     AvatarUrl = rs.CreatedBy.AvatarUrl,
                 },
-                Members = rs.ProjectMembers.Select(pm => new ProjectMemberDto
-                {
-                    MemberId = pm.Member.Id,
-                    FullName = pm.Member.FullName,
-                    Email = pm.Member.Email,
-                    AvatarUrl = pm.Member.AvatarUrl,
-                }).ToList(),
+                // Chỉ hiển thị active members (LeftAt == null)
+                Members = rs.ProjectMembers
+                    .Where(pm => !pm.LeftAt.HasValue)
+                    .Select(pm => new ProjectMemberDto
+                    {
+                        MemberId = pm.Member.Id,
+                        FullName = pm.Member.FullName,
+                        Email = pm.Member.Email,
+                        AvatarUrl = pm.Member.AvatarUrl,
+                    }).ToList(),
                 Tasks = rs.ProjectTasks
                     .Where(pt => isPM || pt.UserId == userId)
                     .Select(pt => new ProjectTaskDto

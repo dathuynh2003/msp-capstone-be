@@ -22,6 +22,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
     {
         private readonly IOrganizationInviteRepository _organizationInviteRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
+        private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly INotificationService _notificationService;
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
@@ -31,12 +32,14 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
             IOrganizationInviteRepository organizationInviteRepository,
             UserManager<User> userManager,
             IProjectMemberRepository projectMemberRepository,
+            IProjectTaskRepository projectTaskRepository,
             INotificationService notificationService,
             IConfiguration configuration)
         {
             _organizationInviteRepository = organizationInviteRepository;
             _userManager = userManager;
             _projectMemberRepository = projectMemberRepository;
+            _projectTaskRepository = projectTaskRepository;
             _notificationService = notificationService;
             _configuration = configuration;
         }
@@ -510,7 +513,7 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 if (!updateResult.Succeeded)
                     return ApiResponse<string>.ErrorResponse("Failed to leave organization.");
 
-                // Sử dụng repository thay vì context
+                // Cập nhật ProjectMember - set LeftAt
                 var activeMemberships = await _projectMemberRepository.GetActiveMembershipsByMemberIdAsync(memberId);
                 var now = DateTime.UtcNow;
                 foreach (var pm in activeMemberships)
@@ -519,6 +522,70 @@ namespace MSP.Application.Services.Implementations.OrganizationInvitation
                 }
                 await _projectMemberRepository.UpdateRangeAsync(activeMemberships);
                 await _projectMemberRepository.SaveChangesAsync();
+
+                // XỬ LÝ TASKS CHƯA HOÀN THÀNH: Unassign các task đang được giao cho member
+                try
+                {
+                    var projectIds = activeMemberships.Select(pm => pm.ProjectId).ToList();
+                    
+                    if (projectIds.Any())
+                    {
+                        // Lấy tất cả tasks của member trong các projects này
+                        var memberTasks = new List<Domain.Entities.ProjectTask>();
+                        foreach (var projectId in projectIds)
+                        {
+                            var tasks = await _projectTaskRepository.GetTasksByProjectIdAsync(projectId);
+                            memberTasks.AddRange(tasks.Where(t => t.UserId == memberId));
+                        }
+
+                        // Filter tasks chưa hoàn thành (không phải Done hoặc Cancelled)
+                        var incompleteTasks = memberTasks
+                            .Where(t => t.Status != TaskEnum.Done.ToString() && 
+                                       t.Status != TaskEnum.Cancelled.ToString())
+                            .ToList();
+
+                        if (incompleteTasks.Any())
+                        {
+                            foreach (var task in incompleteTasks)
+                            {
+                                // Unassign task (set UserId = null)
+                                task.UserId = null;
+                                task.UpdatedAt = now;
+                                await _projectTaskRepository.UpdateAsync(task);
+
+                                // Send notification to PM/Reviewer nếu có
+                                if (task.ReviewerId.HasValue)
+                                {
+                                    var notification = new CreateNotificationRequest
+                                    {
+                                        UserId = task.ReviewerId.Value,
+                                        Title = "Task Unassigned - Member Left Organization",
+                                        Message = $"Task '{task.Title}' has been unassigned because {member.FullName} left the organization.",
+                                        Type = NotificationTypeEnum.TaskUpdate.ToString(),
+                                        EntityId = task.Id.ToString(),
+                                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                                        {
+                                            TaskId = task.Id,
+                                            TaskTitle = task.Title,
+                                            ProjectId = task.ProjectId,
+                                            FormerAssignee = member.FullName,
+                                            Reason = "MemberLeftOrganization"
+                                        })
+                                    };
+
+                                    await _notificationService.CreateInAppNotificationAsync(notification);
+                                }
+                            }
+
+                            await _projectTaskRepository.SaveChangesAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the leave operation
+                    Console.WriteLine($"Failed to unassign tasks for member {memberId}: {ex.Message}");
+                }
 
                 return ApiResponse<string>.SuccessResponse(
                     $"You have successfully left {oldOrganization ?? "the organization"}. Project memberships updated ({activeMemberships.Count}).",

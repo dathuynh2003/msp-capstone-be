@@ -16,5 +16,8 @@ namespace MSP.Application.Services.Interfaces.Notification
         Task<ApiResponse<int>> GetUnreadCountAsync(Guid userId);
         void SendEmailNotification(string toEmail, string title, string message);
         Task<ApiResponse<List<NotificationResponse>>> SendBulkNotificationAsync(SendBulkNotificationRequest request);
+
+        Task<ApiResponse<string>> RegisterFCMTokenAsync(Guid userId, RegisterFCMTokenRequest request);
+        Task<ApiResponse<string>> DeactivateFCMTokenAsync(string fcmToken);
     }
 }

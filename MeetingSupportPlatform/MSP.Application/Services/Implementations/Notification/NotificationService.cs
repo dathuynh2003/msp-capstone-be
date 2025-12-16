@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using MSP.Shared.Enums;
 using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Abstracts;
@@ -20,6 +20,8 @@ namespace MSP.Application.Services.Implementations.Notification
         private readonly UserManager<User> _userManager;
         private readonly IProjectRepository _projectRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
+        private readonly IUserDeviceRepository _userDeviceRepository;
+        private readonly IFCMNotificationService _fcmService;
 
         public NotificationService(
             INotificationRepository notificationRepository,
@@ -27,7 +29,9 @@ namespace MSP.Application.Services.Implementations.Notification
             ISignalRNotificationService signalRService,
             UserManager<User> userManager,
             IProjectRepository projectRepository,
-            IProjectMemberRepository projectMemberRepository)
+            IProjectMemberRepository projectMemberRepository,
+            IUserDeviceRepository userDeviceRepository,
+            IFCMNotificationService fcmService)
         {
             _notificationRepository = notificationRepository;
             _emailSender = emailSender;
@@ -35,6 +39,8 @@ namespace MSP.Application.Services.Implementations.Notification
             _userManager = userManager;
             _projectRepository = projectRepository;
             _projectMemberRepository = projectMemberRepository;
+            _userDeviceRepository = userDeviceRepository;
+            _fcmService = fcmService;
         }
 
         /// Send email notification via Hangfire
@@ -68,6 +74,22 @@ namespace MSP.Application.Services.Implementations.Notification
                 // Push notification via SignalR in real-time
                 await _signalRService.SendNotificationToUserAsync(request.UserId, response);
 
+                // Gửi FCM notification (cho app background/offline)
+                try
+                {
+                    var fcmData = new Dictionary<string, string>
+                {
+                    { "notificationId", response.Id.ToString() },
+                    { "type", response.Type ?? "" },
+                    { "entityId", request.EntityId ?? "" }
+                };
+                    await _fcmService.SendNotificationToUserAsync(request.UserId, request.Title, request.Message, fcmData);
+                }
+                catch (Exception fcmEx)
+                {
+                    // Log FCM errors but do not fail the main notification flow
+                    Console.WriteLine($"[FCM] Failed to send push notification: {fcmEx.Message}");
+                }
                 // Update unread count
                 var unreadCount = await _notificationRepository.GetUnreadCountAsync(request.UserId);
                 await _signalRService.UpdateUnreadCountAsync(request.UserId, unreadCount);
@@ -105,16 +127,16 @@ namespace MSP.Application.Services.Implementations.Notification
             {
                 var notifications = await _notificationRepository.GetByUserIdAsync(userId);
                 var response = notifications.Select(MapToResponse).ToList();
-                
+
                 return ApiResponse<IEnumerable<NotificationResponse>>.SuccessResponse(
-                    response, 
+                    response,
                     $"Retrieved {response.Count} notifications"
                 );
             }
             catch (Exception ex)
             {
                 return ApiResponse<IEnumerable<NotificationResponse>>.ErrorResponse(
-                    Enumerable.Empty<NotificationResponse>(), 
+                    Enumerable.Empty<NotificationResponse>(),
                     $"Error retrieving notifications: {ex.Message}"
                 );
             }
@@ -126,16 +148,16 @@ namespace MSP.Application.Services.Implementations.Notification
             {
                 var notifications = await _notificationRepository.GetUnreadByUserIdAsync(userId);
                 var response = notifications.Select(MapToResponse).ToList();
-                
+
                 return ApiResponse<IEnumerable<NotificationResponse>>.SuccessResponse(
-                    response, 
+                    response,
                     $"Retrieved {response.Count} unread notifications"
                 );
             }
             catch (Exception ex)
             {
                 return ApiResponse<IEnumerable<NotificationResponse>>.ErrorResponse(
-                    Enumerable.Empty<NotificationResponse>(), 
+                    Enumerable.Empty<NotificationResponse>(),
                     $"Error retrieving unread notifications: {ex.Message}"
                 );
             }
@@ -155,7 +177,7 @@ namespace MSP.Application.Services.Implementations.Notification
                 {
                     var existingResponse = MapToResponse(notification);
                     return ApiResponse<NotificationResponse>.SuccessResponse(
-                        existingResponse, 
+                        existingResponse,
                         "Notification already marked as read"
                     );
                 }
@@ -183,7 +205,7 @@ namespace MSP.Application.Services.Implementations.Notification
             try
             {
                 var unreadNotifications = await _notificationRepository.GetUnreadByUserIdAsync(userId);
-                
+
                 if (!unreadNotifications.Any())
                 {
                     return ApiResponse<string>.SuccessResponse("No unread notifications to mark");
@@ -220,7 +242,7 @@ namespace MSP.Application.Services.Implementations.Notification
                 }
 
                 var result = await _notificationRepository.DeleteAsync(id);
-                
+
                 if (result)
                 {
                     // Update unread count if deleted notification was unread
@@ -229,10 +251,10 @@ namespace MSP.Application.Services.Implementations.Notification
                         var unreadCount = await _notificationRepository.GetUnreadCountAsync(notification.UserId);
                         await _signalRService.UpdateUnreadCountAsync(notification.UserId, unreadCount);
                     }
-                    
+
                     return ApiResponse<bool>.SuccessResponse(true, "Notification deleted successfully");
                 }
-                
+
                 return ApiResponse<bool>.ErrorResponse(false, "Failed to delete notification");
             }
             catch (Exception ex)
@@ -270,7 +292,7 @@ namespace MSP.Application.Services.Implementations.Notification
 
                 // 2. Determine recipient list
                 List<Guid> recipientIds;
-                
+
                 if (request.ProjectId.HasValue)
                 {
                     // Send to all active project members
@@ -285,7 +307,7 @@ namespace MSP.Application.Services.Implementations.Notification
                         .Where(pm => pm.LeftAt == null) // Only active members
                         .Select(pm => pm.MemberId)
                         .ToList();
-                        
+
                     if (!recipientIds.Any())
                     {
                         return ApiResponse<List<NotificationResponse>>.ErrorResponse(null, "No active members found in project");
@@ -298,7 +320,7 @@ namespace MSP.Application.Services.Implementations.Notification
                 else
                 {
                     return ApiResponse<List<NotificationResponse>>.ErrorResponse(
-                        null, 
+                        null,
                         "Either ProjectId or RecipientIds must be provided"
                     );
                 }
@@ -328,20 +350,40 @@ namespace MSP.Application.Services.Implementations.Notification
                     // Push realtime via SignalR
                     await _signalRService.SendNotificationToUserAsync(recipientId, response);
 
+                    // Gửi FCM notification
+                    try
+                    {
+                        var fcmData = new Dictionary<string, string>
+                        {
+                            { "notificationId", response.Id.ToString() },
+                            { "type", response.Type ?? "" },
+                            { "entityId", request.EntityId ?? "" }
+                        };
+                        await _fcmService.SendNotificationToUserAsync(
+                            recipientId,
+                            request.Title,
+                            request.Message,
+                            fcmData);
+                    }
+                    catch (Exception fcmEx)
+                    {
+                        Console.WriteLine($"[FCM] Failed for user {recipientId}: {fcmEx.Message}");
+                    }
+
                     // Update unread count
                     var unreadCount = await _notificationRepository.GetUnreadCountAsync(recipientId);
                     await _signalRService.UpdateUnreadCountAsync(recipientId, unreadCount);
                 }
 
                 return ApiResponse<List<NotificationResponse>>.SuccessResponse(
-                    responses, 
+                    responses,
                     $"Successfully sent notification to {responses.Count} recipient(s)"
                 );
             }
             catch (Exception ex)
             {
                 return ApiResponse<List<NotificationResponse>>.ErrorResponse(
-                    null, 
+                    null,
                     $"Error sending bulk notification: {ex.Message}"
                 );
             }
@@ -362,6 +404,113 @@ namespace MSP.Application.Services.Implementations.Notification
                 CreatedAt = notification.CreatedAt,
                 Data = notification.Data
             };
+        }
+
+        /// <summary>
+        /// Register FCM token for push notifications
+        /// </summary>
+        public async Task<ApiResponse<string>> RegisterFCMTokenAsync(Guid userId, RegisterFCMTokenRequest request)
+        {
+            try
+            {
+                // Validate user exists
+                var user = await _userManager.FindByIdAsync(userId.ToString());
+                if (user == null)
+                {
+                    //Console.WriteLine("❌ [FCM] User not found: {UserId}", userId);
+                    return ApiResponse<string>.ErrorResponse(null, "User not found");
+                }
+
+                // Check if token already exists
+                var existingDevice = await _userDeviceRepository.GetByFCMTokenAsync(request.FCMToken);
+
+                if (existingDevice != null)
+                {
+                    // Update existing device
+                    existingDevice.UserId = userId;
+                    existingDevice.Platform = request.Platform;
+                    existingDevice.DeviceId = request.DeviceId;
+                    existingDevice.DeviceName = request.DeviceName;
+                    existingDevice.IsActive = true;
+                    existingDevice.LastActiveAt = DateTime.UtcNow;
+                    existingDevice.UpdatedAt = DateTime.UtcNow;
+
+                    await _userDeviceRepository.UpdateAsync(existingDevice);
+
+                    //Console.WriteLine("✅ [FCM] Updated token for user {UserId}", userId);
+                    return ApiResponse<string>.SuccessResponse(
+                        "FCM token updated successfully",
+                        "Token registered and updated");
+                }
+                else
+                {
+                    // Create new device
+                    var newDevice = new UserDevice
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        FCMToken = request.FCMToken,
+                        Platform = request.Platform,
+                        DeviceId = request.DeviceId,
+                        DeviceName = request.DeviceName,
+                        IsActive = true,
+                        LastActiveAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await _userDeviceRepository.AddAsync(newDevice);
+                    await _userDeviceRepository.SaveChangesAsync();
+
+                    //Console.WriteLine("✅ [FCM] Registered new token for user {UserId}", userId);
+                    return ApiResponse<string>.SuccessResponse(
+                        "FCM token registered successfully",
+                        "New token registered");
+                }
+            }
+            catch (Exception ex)
+            {
+                //Console.WriteLine(ex, "❌ [FCM] Error registering token for user {UserId}", userId);
+                return ApiResponse<string>.ErrorResponse(
+                    null,
+                    $"Error registering FCM token: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Deactivate FCM token (when user logout)
+        /// </summary>
+        public async Task<ApiResponse<string>> DeactivateFCMTokenAsync(string fcmToken)
+        {
+            try
+            {
+                var device = await _userDeviceRepository.GetByFCMTokenAsync(fcmToken);
+
+                if (device == null)
+                {
+                    //Console.WriteLine("⚠️ [FCM] Device not found for token");
+                    return ApiResponse<string>.ErrorResponse(null, "Device not found");
+                }
+
+                var success = await _userDeviceRepository.DeactivateDeviceAsync(device.Id);
+
+                if (success)
+                {
+                    //Console.WriteLine("✅ [FCM] Deactivated token for user {UserId}", device.UserId);
+                    return ApiResponse<string>.SuccessResponse(
+                        "FCM token deactivated successfully",
+                        "Token deactivated");
+                }
+
+                return ApiResponse<string>.ErrorResponse(null, "Failed to deactivate token");
+            }
+            catch (Exception ex)
+            {
+                //Console.WriteLine(ex, "❌ [FCM] Error deactivating token");
+                return ApiResponse<string>.ErrorResponse(
+                    null,
+                    $"Error deactivating token: {ex.Message}");
+            }
         }
     }
 }

@@ -49,6 +49,7 @@ namespace MSP.Infrastructure.Extensions
             services.AddScoped<ILimitationRepository, LimitationRepository>();
             services.AddScoped<ICommentRepository, CommentRepository>();
             services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();    
+            services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
 
             // Register External Services
             services.AddScoped<IEmailSender, EmailSender>();

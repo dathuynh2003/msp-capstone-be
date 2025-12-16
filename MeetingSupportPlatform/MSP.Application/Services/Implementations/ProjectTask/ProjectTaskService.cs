@@ -25,8 +25,9 @@ namespace MSP.Application.Services.Implementations.ProjectTask
         private readonly ITaskHistoryService _taskHistoryService;
         private readonly UserManager<User> _userManager;
         private readonly INotificationService _notificationService;
+        private readonly IProjectMemberRepository _projectMemberRepository;
 
-        public ProjectTaskService(IProjectTaskRepository projectTaskRepository, IProjectRepository projectRepository, IMilestoneRepository milestoneRepository, UserManager<User> userManager, ITodoRepository todoRepository, ITaskHistoryService taskHistoryService, INotificationService notificationService)
+        public ProjectTaskService(IProjectTaskRepository projectTaskRepository, IProjectRepository projectRepository, IMilestoneRepository milestoneRepository, UserManager<User> userManager, ITodoRepository todoRepository, ITaskHistoryService taskHistoryService, INotificationService notificationService, IProjectMemberRepository projectMemberRepository)
         {
             _projectTaskRepository = projectTaskRepository;
             _projectRepository = projectRepository;
@@ -35,6 +36,7 @@ namespace MSP.Application.Services.Implementations.ProjectTask
             _todoRepository = todoRepository;
             _taskHistoryService = taskHistoryService;
             _notificationService = notificationService;
+            _projectMemberRepository = projectMemberRepository;
         }
 
         public async Task<ApiResponse<GetTaskResponse>> CreateTaskAsync(CreateTaskRequest request)
@@ -65,6 +67,20 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 if (user == null)
                 {
                     return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");
+                }
+
+                // VALIDATION: Kiểm tra user có còn active trong project không
+                var projectMembers = await _projectMemberRepository.GetProjectMembersByProjectIdAsync(request.ProjectId);
+                var userMembership = projectMembers.FirstOrDefault(pm => pm.MemberId == request.UserId.Value);
+                
+                if (userMembership == null)
+                {
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User is not a member of this project");
+                }
+                
+                if (userMembership.LeftAt.HasValue)
+                {
+                    return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Cannot assign task to a user who has left the project");
                 }
             }
 
@@ -481,6 +497,23 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 {
                     return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User not found");
                 }
+
+                // VALIDATION: Kiểm tra user có còn active trong project không (nếu đang reassign)
+                if (request.UserId != oldUserId)
+                {
+                    var projectMembers = await _projectMemberRepository.GetProjectMembersByProjectIdAsync(task.ProjectId);
+                    var userMembership = projectMembers.FirstOrDefault(pm => pm.MemberId == request.UserId.Value);
+                    
+                    if (userMembership == null)
+                    {
+                        return ApiResponse<GetTaskResponse>.ErrorResponse(null, "User is not a member of this project");
+                    }
+                    
+                    if (userMembership.LeftAt.HasValue)
+                    {
+                        return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Cannot assign task to a user who has left the project");
+                    }
+                }
             }
 
             User? newReviewer = null;
@@ -496,6 +529,23 @@ namespace MSP.Application.Services.Implementations.ProjectTask
                 if (!reviewerRoles.Contains("ProjectManager"))
                 {
                     return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Reviewer must be a Project Manager");
+                }
+
+                // VALIDATION: Kiểm tra reviewer có còn active trong project không (nếu đang thay đổi reviewer)
+                if (request.ReviewerId != oldReviewerId)
+                {
+                    var projectMembers = await _projectMemberRepository.GetProjectMembersByProjectIdAsync(task.ProjectId);
+                    var reviewerMembership = projectMembers.FirstOrDefault(pm => pm.MemberId == request.ReviewerId.Value);
+                    
+                    if (reviewerMembership == null)
+                    {
+                        return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Reviewer is not a member of this project");
+                    }
+                    
+                    if (reviewerMembership.LeftAt.HasValue)
+                    {
+                        return ApiResponse<GetTaskResponse>.ErrorResponse(null, "Cannot assign reviewer who has left the project");
+                    }
                 }
             }
 
