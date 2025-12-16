@@ -2,6 +2,7 @@
 using MSP.Application.Repositories;
 using MSP.Domain.Entities;
 using MSP.Infrastructure.Persistence.DBContext;
+using MSP.Shared.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,14 +67,21 @@ namespace MSP.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Meeting>> GetOngoingMeetingsToFinishAsync(DateTime currentTime, string ongoingStatus)
+        public async Task<IEnumerable<Meeting>> GetOngoingMeetingsToCancelledAsync(DateTime currentTime, string ongoingStatus)
         {
+            var maxLimitValue = await _context.Limitations
+                .Where(l => l.LimitationType == LimitationTypeEnum.MeetingDuration.ToString())
+                .MaxAsync(l => l.LimitValue);
+            if (maxLimitValue == null)
+            {
+                maxLimitValue = 30;
+            }    
             return await _context.Meetings
                 .Where(m =>
                     !m.IsDeleted &&
                     m.Status == ongoingStatus &&
                     !m.EndTime.HasValue &&
-                    m.StartTime.AddMinutes(30) <= currentTime)
+                    m.StartTime.AddMinutes((double)maxLimitValue) <= currentTime)
                 .ToListAsync();
         }
 

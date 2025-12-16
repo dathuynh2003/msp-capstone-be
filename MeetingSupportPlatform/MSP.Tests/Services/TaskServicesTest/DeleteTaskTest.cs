@@ -21,7 +21,7 @@ namespace MSP.Tests.Services.TaskServicesTest
         private readonly Mock<ITaskHistoryService> _mockTaskHistoryService;
         private readonly Mock<UserManager<User>> _mockUserManager;
         private readonly Mock<INotificationService> _mockNotificationService;
-
+        private readonly Mock<IProjectMemberRepository> _mockProjectMemberRepositoryMock;
         private readonly IProjectTaskService _projectTaskService;
 
         public DeleteTaskTest()
@@ -46,7 +46,8 @@ namespace MSP.Tests.Services.TaskServicesTest
                 _mockUserManager.Object,
                 _mockTodoRepository.Object,
                 _mockTaskHistoryService.Object,
-                _mockNotificationService.Object
+                _mockNotificationService.Object,
+                _mockProjectMemberRepositoryMock.Object
             );
         }
 

@@ -54,7 +54,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                 }
 
                 // 2. Update meetings from Ongoing to Finished (over 1 hour and no EndTime)
-                var ongoingMeetings = await _meetingRepository.GetOngoingMeetingsToFinishAsync(
+                var ongoingMeetings = await _meetingRepository.GetOngoingMeetingsToCancelledAsync(
                     now,
                     MeetingEnum.Ongoing.ToString());
 
@@ -64,7 +64,7 @@ namespace MSP.Application.Services.Implementations.Meeting
                     
                     foreach (var meeting in ongoingMeetings)
                     {
-                        meeting.Status = MeetingEnum.Finished.ToString();
+                        meeting.Status = MeetingEnum.Cancelled.ToString();
                         meeting.EndTime = now;
                         meeting.UpdatedAt = now;
                         await _meetingRepository.UpdateAsync(meeting);

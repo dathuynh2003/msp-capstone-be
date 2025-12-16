@@ -22,7 +22,7 @@ namespace MSP.Tests.Services.TaskServicesTest
         private readonly Mock<UserManager<User>> _mockUserManager;
         private readonly Mock<INotificationService> _mockNotificationService;
         private readonly IProjectTaskService _projectTaskService;
-
+        private readonly Mock<IProjectMemberRepository> _mockProjectMemberRepositoryMock;
         public EditTaskTest()
         {
             _mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
@@ -43,7 +43,8 @@ namespace MSP.Tests.Services.TaskServicesTest
                 _mockUserManager.Object,
                 _mockTodoRepository.Object,
                 _mockTaskHistoryService.Object,
-                _mockNotificationService.Object
+                _mockNotificationService.Object,
+                _mockProjectMemberRepositoryMock.Object
             );
         }
 
