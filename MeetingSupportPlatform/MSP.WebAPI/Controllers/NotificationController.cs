@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSP.Application.Models.Requests.Notification;
@@ -131,6 +132,50 @@ namespace NotificationService.API.Controllers
             {
                 _logger.LogError("SendBulkNotification failed: {Message}", response.Message);
             }
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Register FCM token for push notifications
+        /// </summary>
+        [HttpPost("register-fcm-token")]
+        [Authorize]
+        public async Task<IActionResult> RegisterFCMToken([FromBody] RegisterFCMTokenRequest request)
+        {
+            // Get userId from JWT token
+            var userIdClaim = User.FindFirst("userId")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("[FCM] Invalid user ID from token");
+                return Unauthorized(new { message = "Invalid user" });
+            }
+
+            // Delegate to service layer
+            var response = await _notificationService.RegisterFCMTokenAsync(userId, request);
+
+            if (!response.Success)
+            {
+                _logger.LogError("[FCM] RegisterFCMToken failed for userId {UserId}: {Message}", userId, response.Message);
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Deactivate FCM token (when user logout)
+        /// </summary>
+        [HttpPost("deactivate-fcm-token")]
+        [Authorize]
+        public async Task<IActionResult> DeactivateFCMToken([FromBody] DeactivateFCMTokenRequest request)
+        {
+            var response = await _notificationService.DeactivateFCMTokenAsync(request.FCMToken);
+
+            if (!response.Success)
+            {
+                _logger.LogError("[FCM] DeactivateFCMToken failed for token {FCMToken}: {Message}", request.FCMToken, response.Message);
+            }
+
             return Ok(response);
         }
     }

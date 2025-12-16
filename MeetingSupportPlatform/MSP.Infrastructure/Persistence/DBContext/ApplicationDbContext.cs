@@ -30,7 +30,7 @@ namespace MSP.Infrastructure.Persistence.DBContext
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<OrganizationInvitation> OrganizationInvitations { get; set; }
         public DbSet<TaskHistory> TaskHistories { get; set; }
-
+        public DbSet<UserDevice> UserDevices { get; set; }
 
 
 
@@ -288,6 +288,52 @@ namespace MSP.Infrastructure.Persistence.DBContext
                     .WithMany()
                     .HasForeignKey(h => h.ToUserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // UserDevice
+            builder.Entity<UserDevice>(entity =>
+            {
+                entity.ToTable("UserDevices");
+
+                entity.HasKey(e => e.Id);
+
+                // Index
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_UserDevices_UserId");
+
+                entity.HasIndex(e => e.FCMToken)
+                    .IsUnique()
+                    .HasDatabaseName("UQ_UserDevices_FCMToken");
+
+                entity.HasIndex(e => e.IsActive)
+                    .HasDatabaseName("IX_UserDevices_IsActive");
+
+                // Foreign Key
+                entity.HasOne(d => d.User)
+                    .WithMany()
+                    .HasForeignKey(d => d.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Properties
+                entity.Property(e => e.FCMToken)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Platform)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.DeviceId)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.DeviceName)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.LastActiveAt)
+                    .HasDefaultValueSql("NOW()");
             });
         }
     }
