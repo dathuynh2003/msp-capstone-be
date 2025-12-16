@@ -33,6 +33,7 @@ using MSP.Application.Services.Interfaces.Users;
 using MSP.Application.Services.Interfaces.Comment;
 using MSP.Application.Services.Interfaces.Subscription;
 using MSP.Application.Services.Implementations.Meeting;
+using MSP.Application.Services.Implementations.Notification;
 
 namespace MSP.Application.Extensions
 {
@@ -57,6 +58,7 @@ namespace MSP.Application.Extensions
             services.AddScoped<ISubscriptionService, SubscriptionService>();
             services.AddScoped<ILimitationService, LimitationService>();
             services.AddScoped<ICommentService, CommentService>();
+            services.AddScoped<IFCMNotificationService, FCMNotificationService>();
             
             // Register Hangfire Job Services
             services.AddScoped<TaskStatusCronJobService>();

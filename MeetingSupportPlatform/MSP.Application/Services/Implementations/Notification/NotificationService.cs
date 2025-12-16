@@ -21,6 +21,7 @@ namespace MSP.Application.Services.Implementations.Notification
         private readonly IProjectRepository _projectRepository;
         private readonly IProjectMemberRepository _projectMemberRepository;
         private readonly IUserDeviceRepository _userDeviceRepository;
+        private readonly IFCMNotificationService _fcmService;
 
         public NotificationService(
             INotificationRepository notificationRepository,
@@ -29,7 +30,8 @@ namespace MSP.Application.Services.Implementations.Notification
             UserManager<User> userManager,
             IProjectRepository projectRepository,
             IProjectMemberRepository projectMemberRepository,
-            IUserDeviceRepository userDeviceRepository)
+            IUserDeviceRepository userDeviceRepository,
+            IFCMNotificationService fcmService)
         {
             _notificationRepository = notificationRepository;
             _emailSender = emailSender;
@@ -38,6 +40,7 @@ namespace MSP.Application.Services.Implementations.Notification
             _projectRepository = projectRepository;
             _projectMemberRepository = projectMemberRepository;
             _userDeviceRepository = userDeviceRepository;
+            _fcmService = fcmService;
         }
 
         /// Send email notification via Hangfire
@@ -71,6 +74,22 @@ namespace MSP.Application.Services.Implementations.Notification
                 // Push notification via SignalR in real-time
                 await _signalRService.SendNotificationToUserAsync(request.UserId, response);
 
+                // Gửi FCM notification (cho app background/offline)
+                try
+                {
+                    var fcmData = new Dictionary<string, string>
+                {
+                    { "notificationId", response.Id.ToString() },
+                    { "type", response.Type ?? "" },
+                    { "entityId", request.EntityId ?? "" }
+                };
+                    await _fcmService.SendNotificationToUserAsync(request.UserId, request.Title, request.Message, fcmData);
+                }
+                catch (Exception fcmEx)
+                {
+                    // Log FCM errors but do not fail the main notification flow
+                    Console.WriteLine($"[FCM] Failed to send push notification: {fcmEx.Message}");
+                }
                 // Update unread count
                 var unreadCount = await _notificationRepository.GetUnreadCountAsync(request.UserId);
                 await _signalRService.UpdateUnreadCountAsync(request.UserId, unreadCount);
@@ -330,6 +349,26 @@ namespace MSP.Application.Services.Implementations.Notification
 
                     // Push realtime via SignalR
                     await _signalRService.SendNotificationToUserAsync(recipientId, response);
+
+                    // Gửi FCM notification
+                    try
+                    {
+                        var fcmData = new Dictionary<string, string>
+                        {
+                            { "notificationId", response.Id.ToString() },
+                            { "type", response.Type ?? "" },
+                            { "entityId", request.EntityId ?? "" }
+                        };
+                        await _fcmService.SendNotificationToUserAsync(
+                            recipientId,
+                            request.Title,
+                            request.Message,
+                            fcmData);
+                    }
+                    catch (Exception fcmEx)
+                    {
+                        Console.WriteLine($"[FCM] Failed for user {recipientId}: {fcmEx.Message}");
+                    }
 
                     // Update unread count
                     var unreadCount = await _notificationRepository.GetUnreadCountAsync(recipientId);
