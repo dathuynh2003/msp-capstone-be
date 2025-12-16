@@ -21,6 +21,7 @@ namespace MSP.Application.Services.Interfaces.Meeting
         Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByProjectIdAsync(Guid projectId);
         Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime);
         Task<ApiResponse<string>> UpdateTranscriptAsync(Guid meetingId, string transcription);
+        Task<ApiResponse<string>> UpdateSummaryAsync(Guid meetingId, string summary);
         Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByUserIdAsync(Guid userId);
         Task<ApiResponse<GetMeetingResponse>> RegenerateMeetingAIDataAsync(UpdateMeetingAIDataRequest request);
 

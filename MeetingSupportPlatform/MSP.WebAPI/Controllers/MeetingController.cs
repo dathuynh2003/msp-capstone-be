@@ -109,6 +109,13 @@ namespace MSP.WebAPI.Controllers
             return Ok(rs);
         }
 
+        [HttpPut("{meetingId}/summary")]
+        public async Task<IActionResult> UpdateMeetingSummary([FromRoute] Guid meetingId, [FromBody] string summary)
+        {
+            var rs = await _meetingService.UpdateSummaryAsync(meetingId, summary);
+            return Ok(rs);
+        }
+
         [HttpGet("by-user/{userId}")]
         public async Task<IActionResult> GetMeetingsByUserId([FromRoute] Guid userId)
         {

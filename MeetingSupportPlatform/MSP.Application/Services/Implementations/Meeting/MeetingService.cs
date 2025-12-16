@@ -227,6 +227,17 @@ namespace MSP.Application.Services.Implementations.Meeting
             await _meetingRepository.SaveChangesAsync();
             return ApiResponse<string>.SuccessResponse("updateSuccess", "Meeting transcription updated successfully");
         }
+        public async Task<ApiResponse<string>> UpdateSummaryAsync(Guid meetingId, string summary)
+        {
+            var meeting = await _meetingRepository.GetMeetingByIdAsync(meetingId);
+            if (meeting == null)
+                return ApiResponse<string>.ErrorResponse("updateFailed", "Meeting not found");
+            meeting.Summary = summary;
+            meeting.UpdatedAt = DateTime.UtcNow;
+            await _meetingRepository.UpdateAsync(meeting);
+            await _meetingRepository.SaveChangesAsync();
+            return ApiResponse<string>.SuccessResponse("updateSuccess", "Meeting summary updated successfully");
+        }
 
         public async Task<ApiResponse<List<GetMeetingResponse>>> GetMeetingsByUserIdAsync(Guid userId)
         {
