@@ -78,11 +78,15 @@ namespace MSP.Application.Services.Implementations.Notification
                 try
                 {
                     var fcmData = new Dictionary<string, string>
-                {
-                    { "notificationId", response.Id.ToString() },
-                    { "type", response.Type ?? "" },
-                    { "entityId", request.EntityId ?? "" }
-                };
+                    {
+                        { "notificationId", response.Id.ToString() },
+                        { "type", response.Type ?? "InApp" },
+                        { "entityId", request.EntityId ?? "" },
+                        { "entityType", DetermineEntityType(response.Type) },
+                        { "title", request.Title },
+                        { "message", request.Message },
+                        { "click_action", "FLUTTER_NOTIFICATION_CLICK" }
+                    };
                     await _fcmService.SendNotificationToUserAsync(request.UserId, request.Title, request.Message, fcmData);
                 }
                 catch (Exception fcmEx)
@@ -356,8 +360,12 @@ namespace MSP.Application.Services.Implementations.Notification
                         var fcmData = new Dictionary<string, string>
                         {
                             { "notificationId", response.Id.ToString() },
-                            { "type", response.Type ?? "" },
-                            { "entityId", request.EntityId ?? "" }
+                            { "type", response.Type ?? "InApp" },
+                            { "entityId", request.EntityId ?? "" },
+                            { "entityType", DetermineEntityType(response.Type) },
+                            { "title", request.Title },
+                            { "message", request.Message },
+                            { "click_action", "FLUTTER_NOTIFICATION_CLICK" }
                         };
                         await _fcmService.SendNotificationToUserAsync(
                             recipientId,
@@ -511,6 +519,18 @@ namespace MSP.Application.Services.Implementations.Notification
                     null,
                     $"Error deactivating token: {ex.Message}");
             }
+        }
+
+        private string DetermineEntityType(string? notificationType)
+        {
+            return notificationType switch
+            {
+                "TaskAssignment" => "task",
+                "TaskUpdate" => "task",
+                "ProjectUpdate" => "project",
+                "MeetingReminder" => "meeting",
+                _ => "notification"
+            };
         }
     }
 }
