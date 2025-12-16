@@ -15,7 +15,7 @@ namespace MSP.Application.Repositories
         Task<bool> CancelMeetingAsync(Guid id);
         Task<IEnumerable<User>> GetAttendeesAsync(IEnumerable<Guid> attendeeIds);
         Task<IEnumerable<Meeting>> GetScheduledMeetingsToStartAsync(DateTime currentTime, string scheduledStatus);
-        Task<IEnumerable<Meeting>> GetOngoingMeetingsToFinishAsync(DateTime currentTime, string ongoingStatus);
+        Task<IEnumerable<Meeting>> GetOngoingMeetingsToCancelledAsync(DateTime currentTime, string ongoingStatus);
         Task<IEnumerable<Meeting>> GetUpcomingMeetingsForReminderAsync(DateTime startWindow, DateTime endWindow, string scheduledStatus);
         Task<IEnumerable<Meeting>> GetMeetingsByUserIdAsync(Guid userId);
 
