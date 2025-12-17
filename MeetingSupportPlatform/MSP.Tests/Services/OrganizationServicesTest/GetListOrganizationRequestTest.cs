@@ -22,6 +22,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
         private readonly Mock<IProjectMemberRepository> _mockProjectMemberRepository;
         private readonly Mock<IProjectTaskRepository> _mockProjectTaskRepository;
         private readonly Mock<INotificationService> _mockNotificationService;
+        private readonly Mock<IProjectRepository> _mockProjectRepository;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly IOrganizationInvitationService _organizationInvitationService;
 
@@ -31,6 +32,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
             _mockProjectMemberRepository = new Mock<IProjectMemberRepository>();
             _mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
             _mockNotificationService = new Mock<INotificationService>();
+            _mockProjectRepository = new Mock<IProjectRepository>();
             _mockConfiguration = new Mock<IConfiguration>();
 
             _mockUserManager = new Mock<UserManager<User>>(
@@ -43,6 +45,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
                 _mockUserManager.Object,
                 _mockProjectMemberRepository.Object,
                 _mockProjectTaskRepository.Object,
+                _mockProjectRepository.Object,
                 _mockNotificationService.Object,
                 _mockConfiguration.Object
             );
