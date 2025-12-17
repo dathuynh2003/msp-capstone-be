@@ -79,9 +79,9 @@ namespace MSP.WebAPI.Controllers
         }
 
         [HttpPatch("{meetingId}/finish")]
-        public async Task<IActionResult> FinishMeeting([FromRoute] Guid meetingId, [FromBody] DateTime endTime)
+        public async Task<IActionResult> FinishMeeting([FromRoute] Guid meetingId, [FromBody] FinishMeetingRequest request)
         {
-            var response = await _meetingService.FinishMeetingAsync(meetingId, endTime);
+            var response = await _meetingService.FinishMeetingAsync(meetingId, request);
             if (!response.Success)
             {
                 _logger.LogError("FinishMeeting failed: {Message}", response.Message);

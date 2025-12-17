@@ -154,15 +154,21 @@ namespace MSP.Application.Services.Implementations.Meeting
         }
 
 
-        public async Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, DateTime endTime)
+        public async Task<ApiResponse<string>> FinishMeetingAsync(Guid meetingId, FinishMeetingRequest request)
         {
             var meeting = await _meetingRepository.GetMeetingByIdAsync(meetingId);
             if (meeting == null)
                 return ApiResponse<string>.ErrorResponse(null, "Meeting not found");
 
-            meeting.EndTime = endTime;
+            meeting.EndTime = request.EndTime;
             meeting.Status = MSP.Shared.Enums.MeetingEnum.Finished.ToString();
             meeting.UpdatedAt = DateTime.UtcNow;
+
+            // Update RecordUrl if provided
+            if (!string.IsNullOrEmpty(request.RecordUrl))
+            {
+                meeting.RecordUrl = request.RecordUrl;
+            }
 
             await _meetingRepository.UpdateAsync(meeting);
             await _meetingRepository.SaveChangesAsync();
