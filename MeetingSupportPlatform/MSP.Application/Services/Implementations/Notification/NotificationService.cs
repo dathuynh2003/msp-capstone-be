@@ -22,6 +22,8 @@ namespace MSP.Application.Services.Implementations.Notification
         private readonly IProjectMemberRepository _projectMemberRepository;
         private readonly IUserDeviceRepository _userDeviceRepository;
         private readonly IFCMNotificationService _fcmService;
+        private readonly IProjectTaskRepository _taskRepository;
+        private readonly IMeetingRepository _meetingRepository;
 
         public NotificationService(
             INotificationRepository notificationRepository,
@@ -31,7 +33,10 @@ namespace MSP.Application.Services.Implementations.Notification
             IProjectRepository projectRepository,
             IProjectMemberRepository projectMemberRepository,
             IUserDeviceRepository userDeviceRepository,
-            IFCMNotificationService fcmService)
+            IFCMNotificationService fcmService,
+            IProjectTaskRepository taskRepository,
+            IMeetingRepository meetingRepository
+            )
         {
             _notificationRepository = notificationRepository;
             _emailSender = emailSender;
@@ -41,6 +46,8 @@ namespace MSP.Application.Services.Implementations.Notification
             _projectMemberRepository = projectMemberRepository;
             _userDeviceRepository = userDeviceRepository;
             _fcmService = fcmService;
+            _taskRepository = taskRepository;
+            _meetingRepository = meetingRepository;
         }
 
         /// Send email notification via Hangfire
@@ -77,12 +84,13 @@ namespace MSP.Application.Services.Implementations.Notification
                 // Gửi FCM notification (cho app background/offline)
                 try
                 {
-                    var fcmData = new Dictionary<string, string>
-                {
-                    { "notificationId", response.Id.ToString() },
-                    { "type", response.Type ?? "" },
-                    { "entityId", request.EntityId ?? "" }
-                };
+                    var fcmData = await BuildFCMDataAsync(
+                        request.Type ?? NotificationTypeEnum.InApp.ToString(),
+                        request.EntityId ?? "",
+                        request.Title,
+                        request.Message,
+                        response.Id);
+
                     await _fcmService.SendNotificationToUserAsync(request.UserId, request.Title, request.Message, fcmData);
                 }
                 catch (Exception fcmEx)
@@ -356,8 +364,12 @@ namespace MSP.Application.Services.Implementations.Notification
                         var fcmData = new Dictionary<string, string>
                         {
                             { "notificationId", response.Id.ToString() },
-                            { "type", response.Type ?? "" },
-                            { "entityId", request.EntityId ?? "" }
+                            { "type", response.Type ?? "InApp" },
+                            { "entityId", request.EntityId ?? "" },
+                            { "entityType", DetermineEntityType(response.Type) },
+                            { "title", request.Title },
+                            { "message", request.Message },
+                            { "click_action", "FLUTTER_NOTIFICATION_CLICK" }
                         };
                         await _fcmService.SendNotificationToUserAsync(
                             recipientId,
@@ -512,5 +524,141 @@ namespace MSP.Application.Services.Implementations.Notification
                     $"Error deactivating token: {ex.Message}");
             }
         }
+
+        private string DetermineEntityType(string? notificationType)
+        {
+            return notificationType switch
+            {
+                "TaskAssignment" => "task",
+                "TaskUpdate" => "task",
+                "ProjectUpdate" => "project",
+                "MeetingReminder" => "meeting",
+                _ => "notification"
+            };
+        }
+
+        /// <summary>
+        /// Build FCM data payload với đầy đủ thông tin để navigate
+        /// </summary>
+        private async Task<Dictionary<string, string>> BuildFCMDataAsync(string notificationType, string entityId, string title, string message, Guid notificationId)
+        {
+            var fcmData = new Dictionary<string, string>
+            {
+                { "notificationId", notificationId.ToString() },
+                { "type", notificationType },
+                { "entityId", entityId },
+                { "title", title },
+                { "message", message },
+                { "click_action", "FLUTTER_NOTIFICATION_CLICK" }
+            };
+
+            // Determine entity type và enrich data
+            var entityType = DetermineEntityType(notificationType);
+            fcmData["entityType"] = entityType;
+
+            try
+            {
+                // Query thêm data tùy theo type
+                switch (entityType)
+                {
+                    case "task":
+                        // Task: Cần query để lấy projectId
+                        await EnrichTaskDataAsync(fcmData, entityId);
+                        break;
+
+                    case "project":
+                        // Project: EntityId đã là projectId rồi
+                        fcmData["projectId"] = entityId;
+                        await EnrichProjectDataAsync(fcmData, entityId);
+                        break;
+
+                    case "meeting":
+                        // Meeting: EntityId đã là meetingId rồi
+                        fcmData["meetingId"] = entityId;
+                        await EnrichMeetingDataAsync(fcmData, entityId);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ [FCM] Error enriching data: {ex.Message}");
+                // Không throw exception, vẫn gửi notification với data cơ bản
+            }
+
+            return fcmData;
+        }
+
+        /// <summary>
+        /// Enrich data cho Task notification: Query projectId
+        /// </summary>
+        private async Task EnrichTaskDataAsync(Dictionary<string, string> data, string taskId)
+        {
+            if (!Guid.TryParse(taskId, out var taskGuid))
+            {
+                Console.WriteLine($"[FCM] Invalid taskId: {taskId}");
+                return;
+            }
+
+            var task = await _taskRepository.GetByIdAsync(taskGuid);
+            if (task == null)
+            {
+                Console.WriteLine($"[FCM] Task not found: {taskId}");
+                return;
+            }
+
+            // THÊM projectId để navigate đến project detail
+            data["projectId"] = task.ProjectId.ToString();
+            data["taskName"] = task.Title ?? "";
+
+            // BONUS: Thêm project name
+            var project = await _projectRepository.GetByIdAsync(task.ProjectId);
+            if (project != null)
+            {
+                data["projectName"] = project.Name ?? "";
+            }
+
+            Console.WriteLine($"[FCM] Enriched task data - ProjectId: {task.ProjectId}");
+        }
+
+        /// <summary>
+        /// Enrich data cho Project notification
+        /// </summary>
+        private async Task EnrichProjectDataAsync(Dictionary<string, string> data, string projectId)
+        {
+            if (!Guid.TryParse(projectId, out var projectGuid))
+            {
+                return;
+            }
+
+            var project = await _projectRepository.GetByIdAsync(projectGuid);
+            if (project != null)
+            {
+                data["projectName"] = project.Name ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Enrich data cho Meeting notification
+        /// </summary>
+        private async Task EnrichMeetingDataAsync(Dictionary<string, string> data, string meetingId)
+        {
+            if (!Guid.TryParse(meetingId, out var meetingGuid))
+            {
+                return;
+            }
+
+            var meeting = await _meetingRepository.GetByIdAsync(meetingGuid);
+            if (meeting != null)
+            {
+                data["meetingTitle"] = meeting.Title ?? "";
+
+                // BONUS: Nếu meeting thuộc project
+                if (meeting.ProjectId != Guid.Empty)
+                {
+                    data["projectId"] = meeting.ProjectId.ToString();
+                }
+            }
+        }
+
     }
 }

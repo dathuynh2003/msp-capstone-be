@@ -47,24 +47,56 @@ namespace MSP.Application.Services.Implementations.Project
                 return ApiResponse<GetProjectMemberResponse>.ErrorResponse(null, "Project not found");
             }
 
-            var projectMember = new ProjectMember
-            {
-                ProjectId = request.ProjectId,
-                MemberId = request.UserId,
-                JoinedAt = DateTime.UtcNow
-            };
+            // Check if user is already a member or was a member before
+            var existingMembers = await _projectMemberRepository.GetProjectMembersByProjectIdAsync(request.ProjectId);
+            var existingMember = existingMembers.FirstOrDefault(pm => pm.MemberId == request.UserId);
 
-            _ = await _projectMemberRepository.AddAsync(projectMember);
-            await _projectMemberRepository.SaveChangesAsync();
+            ProjectMember projectMember;
+            bool isRejoining = false;
+
+            if (existingMember != null)
+            {
+                // Case 1: User is already an active member
+                if (existingMember.LeftAt == null)
+                {
+                    return ApiResponse<GetProjectMemberResponse>.ErrorResponse(null, "User is already a member of this project");
+                }
+
+                // Case 2: User was a former member (has LeftAt) - Re-add by clearing LeftAt
+                isRejoining = true;
+                existingMember.LeftAt = null;
+                existingMember.JoinedAt = DateTime.UtcNow; // Update rejoin timestamp
+                await _projectMemberRepository.UpdateAsync(existingMember);
+                await _projectMemberRepository.SaveChangesAsync();
+                projectMember = existingMember;
+            }
+            else
+            {
+                // Case 3: User is a new member - Create new record
+                projectMember = new ProjectMember
+                {
+                    ProjectId = request.ProjectId,
+                    MemberId = request.UserId,
+                    JoinedAt = DateTime.UtcNow
+                };
+
+                _ = await _projectMemberRepository.AddAsync(projectMember);
+                await _projectMemberRepository.SaveChangesAsync();
+            }
 
             // Send notification to the new member
             try
             {
+                var notificationTitle = isRejoining ? "Re-added to Project" : "Added to Project";
+                var notificationMessage = isRejoining 
+                    ? $"You have been re-added to the project '{project.Name}'. Welcome back!"
+                    : $"You have been added to the project '{project.Name}'. Welcome to the team!";
+
                 var notificationRequest = new CreateNotificationRequest
                 {
                     UserId = request.UserId,
-                    Title = "👥 Added to Project",
-                    Message = $"You have been added to the project '{project.Name}'. Welcome to the team!",
+                    Title = notificationTitle,
+                    Message = notificationMessage,
                     Type = NotificationTypeEnum.ProjectUpdate.ToString(),
                     EntityId = project.Id.ToString(),
                     Data = System.Text.Json.JsonSerializer.Serialize(new
@@ -79,18 +111,26 @@ namespace MSP.Application.Services.Implementations.Project
                 await _notificationService.CreateInAppNotificationAsync(notificationRequest);
 
                 // Send email notification
+                var emailSubject = isRejoining ? "Re-added to Project" : "Added to Project";
+                var emailGreeting = isRejoining 
+                    ? $"You have been re-added to the project <strong>{project.Name}</strong>. Welcome back!"
+                    : $"You have been added to the project <strong>{project.Name}</strong>.";
+                var emailClosing = isRejoining
+                    ? "Welcome back! You can now access and collaborate on this project again."
+                    : "Welcome to the team! You can now access and collaborate on this project.";
+
                 _notificationService.SendEmailNotification(
                     user.Email!,
-                    "Added to Project",
+                    emailSubject,
                     $"Hello {user.FullName},<br/><br/>" +
-                    $"You have been added to the project <strong>{project.Name}</strong>.<br/><br/>" +
+                    $"{emailGreeting}<br/><br/>" +
                     $"<strong>Project Details:</strong><br/>" +
                     $"<strong>📝 Name:</strong> {project.Name}<br/>" +
                     $"<strong>📄 Description:</strong> {project.Description ?? "No description"}<br/>" +
                     $"<strong>📅 Start Date:</strong> {project.StartDate:dd/MM/yyyy}<br/>" +
                     $"<strong>📅 End Date:</strong> {project.EndDate:dd/MM/yyyy}<br/>" +
                     $"<strong>📊 Status:</strong> {project.Status}<br/><br/>" +
-                    $"Welcome to the team! You can now access and collaborate on this project.");
+                    $"{emailClosing}");
             }
             catch (Exception ex)
             {
@@ -563,29 +603,6 @@ namespace MSP.Application.Services.Implementations.Project
                             task.UserId = null;
                             task.UpdatedAt = DateTime.UtcNow;
                             await _projectTaskRepository.UpdateAsync(task);
-
-                            // Notify reviewer if exists
-                            if (task.ReviewerId.HasValue)
-                            {
-                                var notification = new CreateNotificationRequest
-                                {
-                                    UserId = task.ReviewerId.Value,
-                                    Title = "Task Unassigned - Member Left Project",
-                                    Message = $"Task '{task.Title}' has been unassigned because {memberName} left the project.",
-                                    Type = NotificationTypeEnum.TaskUpdate.ToString(),
-                                    EntityId = task.Id.ToString(),
-                                    Data = System.Text.Json.JsonSerializer.Serialize(new
-                                    {
-                                        TaskId = task.Id,
-                                        TaskTitle = task.Title,
-                                        ProjectId = task.ProjectId,
-                                        FormerAssignee = memberName,
-                                        Reason = "MemberLeftProject"
-                                    })
-                                };
-
-                                await _notificationService.CreateInAppNotificationAsync(notification);
-                            }
                         }
 
                         await _projectTaskRepository.SaveChangesAsync();
@@ -959,7 +976,8 @@ namespace MSP.Application.Services.Implementations.Project
                         Email = pm.Member.Email,
                         AvatarUrl = pm.Member.AvatarUrl,
                         Role = role
-                    }
+                    },
+                    LeftAt = pm.LeftAt
                 });
             }
 
@@ -1006,7 +1024,8 @@ namespace MSP.Application.Services.Implementations.Project
                         Email = pm.Member.Email,
                         AvatarUrl = pm.Member.AvatarUrl,
                         Role = userRole
-                    }
+                    },
+                    LeftAt = pm.LeftAt
                 });
             }
 
