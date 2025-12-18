@@ -76,6 +76,7 @@ namespace MSP.Application.Services.Implementations.Comment
                         {
                             TaskId = task.Id,
                             TaskTitle = task.Title,
+                            task.ProjectId,
                             CommentId = comment.Id,
                             CommentContent = comment.Content,
                             CommenterName = user.FullName
