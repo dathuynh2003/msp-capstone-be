@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using MSP.Application.Models.Requests.Meeting;
+using MSP.Application.Models.Requests.Notification;
 using MSP.Application.Models.Requests.Todo;
 using MSP.Application.Models.Responses.Meeting;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.Todos;
 using MSP.Domain.Entities;
 using MSP.Shared.Common;
+using MSP.Shared.Enums;
 
 namespace MSP.Application.Services.Implementations.Meeting
 {
@@ -16,17 +19,20 @@ namespace MSP.Application.Services.Implementations.Meeting
         private readonly IProjectRepository _projectRepository;
         private readonly ITodoService _todoService;
         private readonly UserManager<User> _userManager;
+        private readonly INotificationService _notificationService;
 
         public MeetingService(
             IMeetingRepository meetingRepository,
             IProjectRepository projectRepository,
             UserManager<User> userManager,
-            ITodoService todoService)
+            ITodoService todoService,
+            INotificationService notificationService)
         {
             _meetingRepository = meetingRepository;
             _projectRepository = projectRepository;
             _userManager = userManager;
             _todoService = todoService;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResponse<GetMeetingResponse>> CreateMeetingAsync(CreateMeetingRequest request)
@@ -62,6 +68,37 @@ namespace MSP.Application.Services.Implementations.Meeting
 
             // Lấy lại meeting với đầy đủ thông tin
             var createdMeeting = await _meetingRepository.GetMeetingByIdAsync(meeting.Id);
+
+            // Gửi thông báo cho tất cả attendees
+            if (request.AttendeeIds != null && request.AttendeeIds.Any())
+            {
+                try
+                {
+                    var notificationRequest = new SendBulkNotificationRequest
+                    {
+                        SenderId = request.CreatedById,
+                        RecipientIds = request.AttendeeIds.ToList(),
+                        Title = "New Meeting Scheduled",
+                        Message = $"You have been invited to a meeting: {request.Title}. Scheduled at {request.StartTime:MMM dd, yyyy HH:mm}",
+                        NotificationType = NotificationTypeEnum.MeetingReminder.ToString(),
+                        EntityId = meeting.Id.ToString(),
+                        Data = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            meetingId = meeting.Id,
+                            projectId = request.ProjectId,
+                            projectName = project.Name,
+                            startTime = request.StartTime
+                        })
+                    };
+
+                    await _notificationService.SendBulkNotificationAsync(notificationRequest);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the meeting creation
+                    Console.WriteLine($"Failed to send notifications to attendees: {ex.Message}");
+                }
+            }
 
             var response = MapToMeetingResponse(createdMeeting);
             return ApiResponse<GetMeetingResponse>.SuccessResponse(response, "Meeting created successfully");

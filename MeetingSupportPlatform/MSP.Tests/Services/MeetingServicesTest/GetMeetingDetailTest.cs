@@ -2,6 +2,7 @@
 using Moq;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Interfaces.Meeting;
+using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.Todos;
 using MSP.Domain.Entities;
 using Xunit;
@@ -14,8 +15,9 @@ namespace MSP.Tests.Services.MeetingServicesTest
         private readonly Mock<IMeetingRepository> _mockMeetingRepository;
         private readonly Mock<IProjectRepository> _mockProjectRepository;
         private readonly Mock<UserManager<User>> _mockUserManager;
-        private readonly IMeetingService _meetingService;
         private readonly Mock<ITodoService> _mockTodoService;
+        private readonly Mock<INotificationService> _mockNotificationService;
+        private readonly IMeetingService _meetingService;
 
         public GetMeetingDetailTest()
         {
@@ -26,12 +28,14 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 null, null, null, null, null, null, null, null
             );
             _mockTodoService = new Mock<ITodoService>();
+            _mockNotificationService = new Mock<INotificationService>();
 
             _meetingService = new MeetingServiceImpl(
                 _mockMeetingRepository.Object,
                 _mockProjectRepository.Object,
                 _mockUserManager.Object,
-                _mockTodoService.Object
+                _mockTodoService.Object,
+                _mockNotificationService.Object
             );
         }
 
@@ -61,7 +65,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var milestone = new Milestone
@@ -200,7 +204,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
@@ -258,7 +262,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
@@ -314,7 +318,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
@@ -369,7 +373,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var startTime = DateTime.UtcNow.AddDays(-1);
@@ -435,7 +439,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
@@ -490,7 +494,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
@@ -556,7 +560,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var attendees = new List<User>();
@@ -639,7 +643,7 @@ namespace MSP.Tests.Services.MeetingServicesTest
                 Name = "Test Project",
                 CreatedById = userId,
                 OwnerId = userId,
-                Status = "Active"
+                Status = "InProgress"
             };
 
             var meeting = new Meeting
