@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using MSP.Application.Abstracts;
 using MSP.Application.Models.Requests.User;
@@ -12,6 +10,9 @@ using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.Users;
 using MSP.Domain.Entities;
 using MSP.Shared.Enums;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace MSP.Tests.Services.OrganizationServicesTest
@@ -27,7 +28,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
         private readonly Mock<ISubscriptionRepository> _mockSubscriptionRepository;
         private readonly Mock<IPackageRepository> _mockPackageRepository;
         private readonly IUserService _userService;
-
+        private readonly IConfiguration _configuration;
         public ReassignRoleTest()
         {
             _mockUserManager = new Mock<UserManager<User>>(
@@ -44,7 +45,12 @@ namespace MSP.Tests.Services.OrganizationServicesTest
 
             // Add a mock for IProjectTaskRepository
             var mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
-
+            _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:ClientUrl"] = "http://localhost:3000"
+            })
+            .Build();
             _userService = new UserService(
                 _mockUserManager.Object,
                 _mockUserRepository.Object,
@@ -54,7 +60,8 @@ namespace MSP.Tests.Services.OrganizationServicesTest
                 _mockProjectRepository.Object,
                 mockProjectTaskRepository.Object, // Pass the mock here
                 _mockSubscriptionRepository.Object,
-                _mockPackageRepository.Object
+                _mockPackageRepository.Object,
+                _configuration
             );
         }
 
