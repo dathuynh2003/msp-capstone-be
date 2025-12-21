@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using MockQueryable;
 using Moq;
 using MSP.Application.Abstracts;
 using MSP.Application.Repositories;
@@ -6,7 +8,6 @@ using MSP.Application.Services.Implementations.Users;
 using MSP.Application.Services.Interfaces.Notification;
 using MSP.Domain.Entities;
 using Xunit;
-using MockQueryable;
 
 namespace MSP.Tests.Services.UserServicesTest
 {
@@ -21,9 +22,8 @@ namespace MSP.Tests.Services.UserServicesTest
         private readonly Mock<IProjectTaskRepository> _mockProjectTaskRepository;
         private readonly Mock<ISubscriptionRepository> _mockSubscriptionRepository;
         private readonly Mock<IPackageRepository> _mockPackageRepository;
-
         private readonly UserService _userService;
-
+        private readonly IConfiguration _configuration;
         public GetUserDetailTest()
         {
             _mockUserManager = new Mock<UserManager<User>>(
@@ -39,7 +39,12 @@ namespace MSP.Tests.Services.UserServicesTest
             _mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
             _mockSubscriptionRepository = new Mock<ISubscriptionRepository>();
             _mockPackageRepository = new Mock<IPackageRepository>();
-
+            _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:ClientUrl"] = "http://localhost:3000"
+            })
+            .Build();
             _userService = new UserService(
                 _mockUserManager.Object,
                 _mockUserRepository.Object,
@@ -49,7 +54,8 @@ namespace MSP.Tests.Services.UserServicesTest
                 _mockProjectRepository.Object,
                 _mockProjectTaskRepository.Object,
                 _mockSubscriptionRepository.Object,
-                _mockPackageRepository.Object
+                _mockPackageRepository.Object,
+                _configuration
             );
         }
 

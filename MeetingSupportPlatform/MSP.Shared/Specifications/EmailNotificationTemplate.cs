@@ -39,7 +39,8 @@
 
         public static string BusinessOwnerStatusNotification(
                 string Fullname,
-                bool isApproved // true: duyệt, false: từ chối
+                bool isApproved, // true: duyệt, false: từ chối
+                string clientUrl
             )
         {
             string title = isApproved ? "Congratulations! You have been approved"
@@ -49,8 +50,8 @@
                 : $"Hello <strong>{Fullname}</strong>,<br/>We regret to inform you that your request to become a Business Owner has not been approved at this time. You may try again or contact our support team for more details.";
 
             string buttonHtml = isApproved
-                ? @"<div style='margin: 30px 0;'>
-                        <a href='https://msp.audivia.vn/sign-in'
+                ? $@"<div style='margin: 30px 0;'>
+                        <a href='{clientUrl}/sign-in'
                            style='background-color: #ff6f00; color: white; padding: 15px 35px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;'>
                             Access Your Account
                         </a>

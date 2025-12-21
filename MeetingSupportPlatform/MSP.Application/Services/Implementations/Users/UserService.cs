@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MSP.Application.Abstracts;
 using MSP.Application.Models.Requests.Notification;
 using MSP.Application.Models.Requests.User;
@@ -25,7 +26,9 @@ namespace MSP.Application.Services.Implementations.Users
         private readonly IProjectTaskRepository _projectTaskRepository;
         private readonly ISubscriptionRepository _subscriptionRepository;
         private readonly IPackageRepository _packageRepository;
-        public UserService(UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IOrganizationInviteRepository organizationInviteRepository, IProjectMemberRepository projectMemberRepository, IProjectRepository projectRepository, IProjectTaskRepository projectTaskRepository, ISubscriptionRepository subscriptionRepository, IPackageRepository packageRepository)
+        private readonly IConfiguration _configuration;
+        private readonly string _clientUrl;
+        public UserService(UserManager<User> userManager, IUserRepository userRepository, INotificationService notificationService, IOrganizationInviteRepository organizationInviteRepository, IProjectMemberRepository projectMemberRepository, IProjectRepository projectRepository, IProjectTaskRepository projectTaskRepository, ISubscriptionRepository subscriptionRepository, IPackageRepository packageRepository, IConfiguration configuration)
         {
             _userManager = userManager;
             _userRepository = userRepository;
@@ -36,8 +39,10 @@ namespace MSP.Application.Services.Implementations.Users
             _projectTaskRepository = projectTaskRepository;
             _subscriptionRepository = subscriptionRepository;
             _packageRepository = packageRepository;
+            _configuration = configuration;
+            _clientUrl = _configuration["AppSettings:ClientUrl"]
+                ?? throw new InvalidOperationException("AppSettings:ClientUrl is not configured.");
         }
-
         public async Task<ApiResponse<IEnumerable<UserResponse>>> GetBusinessOwnersAsync()
         {
             try
@@ -129,7 +134,7 @@ namespace MSP.Application.Services.Implementations.Users
 
 
             // Gửi email thông báo BusinessOwner được duyệt
-            var emailBody = EmailNotificationTemplate.BusinessOwnerStatusNotification(user.FullName, true);
+            var emailBody = EmailNotificationTemplate.BusinessOwnerStatusNotification(user.FullName, true, _clientUrl);
 
             _notificationService.SendEmailNotification(
                 user.Email,
@@ -193,7 +198,7 @@ namespace MSP.Application.Services.Implementations.Users
 
 
             // Gửi email thông báo BusinessOwner bị từ chối
-            var emailBody = EmailNotificationTemplate.BusinessOwnerStatusNotification(user.FullName, false);
+            var emailBody = EmailNotificationTemplate.BusinessOwnerStatusNotification(user.FullName, false, _clientUrl);
 
             _notificationService.SendEmailNotification(
                 user.Email,

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using MSP.Application.Abstracts;
 using MSP.Application.Repositories;
@@ -25,7 +26,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
         private readonly Mock<ISubscriptionRepository> _mockSubscriptionRepository;
         private readonly Mock<IPackageRepository> _mockPackageRepository;
         private readonly IUserService _userService;
-
+        private readonly IConfiguration _configuration;
         public DeleteMemberTest()
         {
             _mockUserManager = new Mock<UserManager<User>>(
@@ -50,7 +51,8 @@ namespace MSP.Tests.Services.OrganizationServicesTest
                 _mockProjectRepository.Object,
                 _mockProjectTaskRepository.Object,
                 _mockSubscriptionRepository.Object,
-                _mockPackageRepository.Object
+                _mockPackageRepository.Object,
+                _configuration
             );
         }
 

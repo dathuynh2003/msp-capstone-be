@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Moq;
-using MSP.Domain.Entities;
-// Import các namespace chứa Interface Repository/Service của bạn
-using MSP.Application.Services.Interfaces.Notification;
-using Xunit;
 using MSP.Application.Abstracts;
 using MSP.Application.Models.Requests.User;
 using MSP.Application.Repositories;
 using MSP.Application.Services.Implementations.Users;
+// Import các namespace chứa Interface Repository/Service của bạn
+using MSP.Application.Services.Interfaces.Notification;
+using MSP.Domain.Entities;
+using Xunit;
 
 namespace MSP.Tests.Services.UserServicesTest
 {
@@ -23,7 +24,7 @@ namespace MSP.Tests.Services.UserServicesTest
         private readonly Mock<IProjectTaskRepository> _mockProjectTaskRepository;
         private readonly Mock<ISubscriptionRepository> _mockSubscriptionRepository;
         private readonly Mock<IPackageRepository> _mockPackageRepository;
-
+        private readonly IConfiguration _configuration;
         private readonly UserService _userService;
 
         public UpdateUserProfileTest()
@@ -43,7 +44,12 @@ namespace MSP.Tests.Services.UserServicesTest
             _mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
             _mockSubscriptionRepository = new Mock<ISubscriptionRepository>();
             _mockPackageRepository = new Mock<IPackageRepository>();
-
+            _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:ClientUrl"] = "http://localhost:3000"
+            })
+            .Build();
             // 4. Khởi tạo UserService với đầy đủ tham số
             _userService = new UserService(
                 _mockUserManager.Object,
@@ -54,7 +60,8 @@ namespace MSP.Tests.Services.UserServicesTest
                 _mockProjectRepository.Object,
                 _mockProjectTaskRepository.Object,
                 _mockSubscriptionRepository.Object,
-                _mockPackageRepository.Object
+                _mockPackageRepository.Object,
+                _configuration
             );
         }
         [Fact]

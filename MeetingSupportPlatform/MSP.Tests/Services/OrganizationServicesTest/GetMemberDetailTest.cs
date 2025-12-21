@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using MSP.Application.Abstracts;
 using MSP.Application.Repositories;
@@ -12,6 +9,10 @@ using MSP.Application.Services.Interfaces.Notification;
 using MSP.Application.Services.Interfaces.Users;
 using MSP.Domain.Entities;
 using MSP.Shared.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace MSP.Tests.Services.OrganizationServicesTest
@@ -28,7 +29,7 @@ namespace MSP.Tests.Services.OrganizationServicesTest
         private readonly Mock<ISubscriptionRepository> _mockSubscriptionRepository;
         private readonly Mock<IPackageRepository> _mockPackageRepository;
         private readonly IUserService _userService;
-
+        private readonly IConfiguration _configuration;
         public GetMemberDetailTest()
         {
             _mockUserManager = new Mock<UserManager<User>>(
@@ -43,7 +44,12 @@ namespace MSP.Tests.Services.OrganizationServicesTest
             _mockProjectTaskRepository = new Mock<IProjectTaskRepository>();
             _mockSubscriptionRepository = new Mock<ISubscriptionRepository>();
             _mockPackageRepository = new Mock<IPackageRepository>();
-
+            _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppSettings:ClientUrl"] = "http://localhost:3000"
+            })
+            .Build();
             _userService = new UserService(
                 _mockUserManager.Object,
                 _mockUserRepository.Object,
@@ -53,7 +59,8 @@ namespace MSP.Tests.Services.OrganizationServicesTest
                 _mockProjectRepository.Object,
                 _mockProjectTaskRepository.Object,
                 _mockSubscriptionRepository.Object,
-                _mockPackageRepository.Object
+                _mockPackageRepository.Object,
+                _configuration
             );
         }
 
