@@ -50,7 +50,7 @@
 
             string buttonHtml = isApproved
                 ? @"<div style='margin: 30px 0;'>
-                        <a href='http://localhost:3000'
+                        <a href='https://msp.audivia.vn/sign-in'
                            style='background-color: #ff6f00; color: white; padding: 15px 35px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;'>
                             Access Your Account
                         </a>
