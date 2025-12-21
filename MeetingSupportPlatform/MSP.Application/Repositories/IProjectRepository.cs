@@ -17,6 +17,7 @@ namespace MSP.Application.Repositories
         Task<int> CountProjectsAsync(Guid userId);
         Task<Project> GetProjectDetailWithPMAsync(Guid projectId, Guid userId);
         Task<Project> GetProjectDetailWithMemberAsync(Guid projectId, Guid userId);
+        Task<bool> IsActiveUserInProject(Guid projectId, Guid userId);
 
 
     }

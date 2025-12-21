@@ -64,7 +64,8 @@ namespace MSP.WebAPI.Controllers
         [HttpGet("{projectId}")]
         public async Task<IActionResult> GetProjectById([FromRoute] Guid projectId)
         {
-            var response = await _projectService.GetProjectByIdAsync(projectId);
+            var curUserId = Guid.Parse(User.Claims.First(c => c.Type == "userId").Value);
+            var response = await _projectService.GetProjectByIdAsync(projectId, curUserId);
 
             if (!response.Success)
             {

@@ -10,7 +10,7 @@ namespace MSP.Application.Services.Interfaces.Project
         Task<ApiResponse<GetProjectResponse>> CreateProjectAsync(CreateProjectRequest request);
         Task<ApiResponse<GetProjectResponse>> UpdateProjectAsync(UpdateProjectRequest request);
         Task<ApiResponse<string>> DeleteProjectAsync(Guid projectId);
-        Task<ApiResponse<GetProjectResponse>> GetProjectByIdAsync(Guid projectId);
+        Task<ApiResponse<GetProjectResponse>> GetProjectByIdAsync(Guid projectId, Guid curUserId);
         Task<ApiResponse<PagingResponse<GetProjectResponse>>> GetAllProjectsAsync(PagingRequest request);
         Task<ApiResponse<PagingResponse<GetProjectResponse>>> GetProjectsByManagerIdAsync(PagingRequest request, Guid managerId);
         Task<ApiResponse<PagingResponse<GetProjectResponse>>> GetProjectsByBOIdAsync(PagingRequest request, Guid boId);
