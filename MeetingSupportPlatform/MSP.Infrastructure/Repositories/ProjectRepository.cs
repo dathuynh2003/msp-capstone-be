@@ -140,5 +140,13 @@ namespace MSP.Infrastructure.Repositories
 
             return rs;
         }
+
+        public async Task<bool> IsActiveUserInProject(Guid projectId, Guid userId)
+        {
+            var rs = await _context.ProjectMembers
+                .AnyAsync(pm => pm.ProjectId == projectId && pm.MemberId == userId && pm.LeftAt == null);
+            return rs;
+
+        }
     }
 }

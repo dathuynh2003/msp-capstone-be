@@ -282,9 +282,21 @@ namespace MSP.Application.Services.Implementations.Project
             return ApiResponse<PagingResponse<GetProjectResponse>>.SuccessResponse(pagingResponse);
         }
 
-        public async Task<ApiResponse<GetProjectResponse>> GetProjectByIdAsync(Guid projectId)
+        public async Task<ApiResponse<GetProjectResponse>> GetProjectByIdAsync(Guid projectId, Guid curUserId)
         {
             var project = await _projectRepository.GetProjectByIdAsync(projectId);
+
+            var curUser = await _userManager.FindByIdAsync(curUserId.ToString());
+            if (curUser == null)
+                return ApiResponse<GetProjectResponse>.ErrorResponse(null, "Current user not found");
+            if (await _projectRepository.IsActiveUserInProject(projectId, curUserId) == false && project?.OwnerId != curUser.ManagedById)
+            {
+                var curUserRoles = await _userManager.GetRolesAsync(curUser);
+                if (!curUserRoles.Contains("BusinessOwner"))
+                {
+                    return ApiResponse<GetProjectResponse>.ErrorResponse(null, "You do not have permission to access this project");
+                }
+            }
 
             if (project == null)
             {
