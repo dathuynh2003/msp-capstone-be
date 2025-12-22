@@ -49,6 +49,17 @@ namespace MSP.Application.Services.Implementations.Cleanup
                             ? $"from BusinessOwner {invitation.BusinessOwnerId}"
                             : $"from Member {invitation.MemberId}";
 
+                        // Clear token if exists
+                        if (!string.IsNullOrEmpty(invitation.Token))
+                        {
+                            _logger.LogInformation(
+                                "Clearing token for expired {Type} {InvitationId}",
+                                typeText,
+                                invitation.Id);
+
+                            invitation.Token = null;
+                        }
+
                         _logger.LogInformation(
                             "{Type} {InvitationId} {FromText} created at {CreatedAt} has been expired and marked as Canceled",
                             typeText,
