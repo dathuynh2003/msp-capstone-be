@@ -60,14 +60,14 @@ namespace MSP.WebAPI.Controllers
             return Ok(result);
         }
         [HttpGet("received-invitations/{memberId}")]
-        [Authorize(Roles = "Member")]
+        [Authorize(Roles = "Member,ProjectManager")]
         public async Task<IActionResult> GetReceivedInvitationsByMemberId(Guid memberId)
         {
             var result = await _organizationInvitationService.GetReceivedInvitationsByMemberIdAsync(memberId);
             return Ok(result);
         }
         [HttpGet("sent-requests/{memberId}")]
-        [Authorize(Roles = "Member")]
+        [Authorize(Roles = "Member,ProjectManager")]
         public async Task<IActionResult> GetSentRequestsByMemberId(Guid memberId)
         {
             var result = await _organizationInvitationService.GetSentRequestsByMemberIdAsync(memberId);
@@ -75,7 +75,7 @@ namespace MSP.WebAPI.Controllers
         }
 
         [HttpPost("accept-invitation/{invitationId}")]
-        [Authorize(Roles = "Member")]
+        [Authorize(Roles = "Member,ProjectManager")]
         public async Task<IActionResult> AcceptInvitation(Guid invitationId)
         {
             var curUserId = Guid.Parse(User.Claims.First(c => c.Type == "userId").Value);
@@ -111,7 +111,7 @@ namespace MSP.WebAPI.Controllers
         /// [Member] Từ chối (reject) invitation từ Business Owner
         /// </summary>
         [HttpPost("reject-invitation/{invitationId}")]
-        [Authorize(Roles = "Member")]
+        [Authorize(Roles = "Member,ProjectManager")]
         public async Task<IActionResult> RejectInvitation(Guid invitationId)
         {
             var curUserId = Guid.Parse(User.Claims.First(c => c.Type == "userId").Value);
